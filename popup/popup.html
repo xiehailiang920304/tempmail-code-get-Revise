@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临时邮箱工具</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="header-left">
+                <span class="icon">📧</span>
+                <h1 class="title">临时邮箱工具</h1>
+            </div>
+            <div class="header-right">
+                <button id="settingsBtn" class="icon-btn" title="设置">⚙️</button>
+            </div>
+        </header>
+
+        <!-- 邮箱生成区域 -->
+        <section class="email-section">
+            <div class="section-header">
+                <span class="section-icon">📧</span>
+                <h2 class="section-title">当前邮箱</h2>
+            </div>
+            <div class="input-group">
+                <input type="text" id="emailInput" class="email-input" placeholder="点击生成邮箱..." readonly>
+                <button id="copyEmailBtn" class="copy-btn" title="复制邮箱">📋</button>
+            </div>
+            <div class="button-group">
+                <button id="generateEmailBtn" class="primary-btn">生成新邮箱</button>
+                <button id="emailHistoryBtn" class="secondary-btn">历史邮箱</button>
+            </div>
+        </section>
+
+        <!-- 验证码获取区域 -->
+        <section class="code-section">
+            <div class="section-header">
+                <span class="section-icon">🔐</span>
+                <h2 class="section-title">当前验证码</h2>
+            </div>
+            <div class="input-group">
+                <input type="text" id="codeInput" class="code-input" placeholder="点击获取验证码..." readonly>
+                <button id="copyCodeBtn" class="copy-btn" title="复制验证码">📋</button>
+            </div>
+            <div class="button-group">
+                <button id="getCodeBtn" class="primary-btn">获取验证码</button>
+                <button id="stopCodeBtn" class="danger-btn" style="display: none;">停止获取</button>
+                <button id="codeHistoryBtn" class="secondary-btn">历史验证码</button>
+            </div>
+        </section>
+
+        <!-- 状态信息区域 -->
+        <section class="status-section">
+            <div class="section-header">
+                <span class="section-icon">📊</span>
+                <h2 class="section-title">状态信息</h2>
+            </div>
+            <div id="statusContainer" class="status-container">
+                <div class="status-item">
+                    <span class="status-dot ready"></span>
+                    <span class="status-text">就绪</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 历史记录弹窗 -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="historyModalTitle" class="modal-title">历史记录</h3>
+                <button id="closeHistoryModal" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- 搜索框 -->
+                <div class="search-container" id="searchContainer" style="display: none;">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索邮箱...">
+                </div>
+                
+                <!-- 历史列表 -->
+                <div id="historyList" class="history-list">
+                    <!-- 动态生成历史记录项 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clearHistoryBtn" class="danger-btn">清除全部</button>
+                <button id="exportHistoryBtn" class="secondary-btn">导出历史</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 加载遮罩 -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">处理中...</div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="notification" style="display: none;">
+        <span id="notificationText"></span>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
