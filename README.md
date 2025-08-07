@@ -2,6 +2,13 @@
 
 一个现代化的Chrome侧边栏扩展，专为自动生成临时邮箱并获取验证码而设计。支持多域名配置和Cloudflare域名转发，提供持久化的侧边栏体验。
 
+## 📥 快速下载
+
+[![GitHub release](https://img.shields.io/github/v/release/w154594742/tempmail-code-get)](https://github.com/w154594742/tempmail-code-get/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/w154594742/tempmail-code-get/total)](https://github.com/w154594742/tempmail-code-get/releases)
+
+**🔗 [下载最新版本 CRX 文件](https://github.com/w154594742/tempmail-code-get/releases/latest)**
+
 ## ✨ 核心特性
 
 ### 🎯 智能邮箱生成
@@ -33,7 +40,21 @@
 
 ### 安装方法
 
-1. **下载项目**: 克隆或下载此项目到本地
+#### 方法一：下载CRX安装包（推荐）
+
+1. **下载CRX文件**:
+   - 访问 [Releases页面](https://github.com/w154594742/tempmail-code-get/releases)
+   - 下载最新版本的 `tempmail-code-get.crx` 文件
+
+2. **安装扩展**:
+   - 打开Chrome浏览器，进入 `chrome://extensions/`
+   - 开启右上角的"开发者模式"
+   - 将下载的 `.crx` 文件拖拽到扩展页面
+   - 点击"添加扩展程序"确认安装
+
+#### 方法二：源码安装
+
+1. **下载源码**: 克隆或下载此项目到本地
 2. **开启开发者模式**: Chrome浏览器 → 扩展程序 → 开启"开发者模式"
 3. **加载扩展**: 点击"加载已解压的扩展程序" → 选择项目文件夹
 4. **完成安装**: 扩展图标出现在工具栏
@@ -214,6 +235,12 @@
 - 验证码获取速度取决于邮件服务响应时间
 - Chrome侧边栏工具栏按钮无法隐藏（浏览器限制）
 
+### 安装说明
+- **CRX安装**: 需要开启Chrome开发者模式才能安装CRX文件
+- **安全提示**: Chrome可能显示"无法验证此扩展程序"的警告，这是正常现象
+- **更新方式**: 新版本发布时，下载新的CRX文件重新安装即可
+- **数据保留**: 重新安装时会保留之前的配置和历史记录
+
 ### 隐私安全
 - 所有数据仅存储在本地浏览器中
 - 不会上传任何个人信息到服务器
@@ -227,9 +254,17 @@
 ## 🤝 支持与反馈
 
 如有问题或建议，欢迎通过以下方式联系：
-- 提交GitHub Issue
-- 发送邮件反馈
-- 参与项目贡献
+
+### GitHub
+- **🐛 [报告问题](https://github.com/w154594742/tempmail-code-get/issues)**: 遇到Bug或错误
+- **💡 [功能建议](https://github.com/w154594742/tempmail-code-get/issues)**: 提出新功能想法
+- **� [下载更新](https://github.com/w154594742/tempmail-code-get/releases)**: 获取最新版本
+- **⭐ [Star项目](https://github.com/w154594742/tempmail-code-get)**: 支持项目发展
+
+### 贡献代码
+- Fork项目并提交Pull Request
+- 参与代码审查和讨论
+- 帮助改进文档和测试
 
 ---
 
