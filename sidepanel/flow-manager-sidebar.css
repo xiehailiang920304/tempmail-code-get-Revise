@@ -792,8 +792,13 @@ body {
     word-wrap: break-word;
 }
 
+/* 邮件内容深色主题适配 */
 .log-entry.info {
-    color: #61dafb;
+    color: #ffffff !important;
+}
+
+.log-entry.info * {
+    color: #ffffff !important;
 }
 
 .log-entry.warn {
@@ -2238,3 +2243,5 @@ body {
     color: #666;
     font-size: 14px;
 }
+
+
