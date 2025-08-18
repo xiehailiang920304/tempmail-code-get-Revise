@@ -218,6 +218,54 @@ class PopupManager {
     }
   }
 
+  // 通用剪贴板复制方法（焦点检查+降级）
+  async copyToClipboard(text, successMessage = '已复制', errorMessage = '复制失败') {
+    try {
+      // 方法1：尝试现代API（需要焦点）
+      if (navigator.clipboard && document.hasFocus()) {
+        await navigator.clipboard.writeText(text);
+        this.showNotification(successMessage, 'success');
+        return true;
+      }
+
+      // 方法2：降级到传统方法
+      return this.fallbackCopyToClipboard(text, successMessage, errorMessage);
+    } catch (error) {
+      console.error('复制失败:', error);
+      // 降级到传统方法
+      return this.fallbackCopyToClipboard(text, successMessage, errorMessage);
+    }
+  }
+
+  // 传统剪贴板复制方法
+  fallbackCopyToClipboard(text, successMessage, errorMessage) {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        this.showNotification(successMessage, 'success');
+        return true;
+      } else {
+        this.showNotification(errorMessage, 'error');
+        return false;
+      }
+    } catch (err) {
+      console.error('传统复制方法失败:', err);
+      this.showNotification(errorMessage, 'error');
+      return false;
+    }
+  }
+
   // 复制邮箱
   async copyEmail() {
     const email = document.getElementById('emailInput').value;
@@ -226,13 +274,7 @@ class PopupManager {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(email);
-      this.showNotification('邮箱已复制', 'success');
-    } catch (error) {
-      console.error('复制邮箱失败:', error);
-      this.showNotification('复制失败', 'error');
-    }
+    await this.copyToClipboard(email, '邮箱已复制');
   }
 
   // 获取验证码
@@ -310,13 +352,7 @@ class PopupManager {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(code);
-      this.showNotification('验证码已复制', 'success');
-    } catch (error) {
-      console.error('复制验证码失败:', error);
-      this.showNotification('复制失败', 'error');
-    }
+    await this.copyToClipboard(code, '验证码已复制');
   }
 
   // 显示邮箱历史
@@ -404,14 +440,12 @@ class PopupManager {
     try {
       if (type === 'email') {
         document.getElementById('emailInput').value = item.email;
-        await navigator.clipboard.writeText(item.email);
-        this.showNotification('邮箱已选择并复制', 'success');
+        await this.copyToClipboard(item.email, '邮箱已选择并复制');
       } else if (type === 'code') {
         document.getElementById('codeInput').value = item.code;
-        await navigator.clipboard.writeText(item.code);
-        this.showNotification('验证码已选择并复制', 'success');
+        await this.copyToClipboard(item.code, '验证码已选择并复制');
       }
-      
+
       this.closeHistoryModal();
     } catch (error) {
       console.error('选择历史项目失败:', error);

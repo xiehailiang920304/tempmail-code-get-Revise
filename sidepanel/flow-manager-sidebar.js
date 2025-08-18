@@ -1406,25 +1406,13 @@ class SidebarFlowManager {
       this.copyEmail();
     });
 
-    // 设置功能
-    document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
-      this.saveSettings();
-    });
-
-    document.getElementById('resetSettingsBtn')?.addEventListener('click', () => {
-      this.resetSettings();
-    });
-
+    // 设置功能 - 只保留导入导出功能
     document.getElementById('exportDataBtn')?.addEventListener('click', () => {
       this.exportData();
     });
 
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
       this.importData();
-    });
-
-    document.getElementById('clearDataBtn')?.addEventListener('click', () => {
-      this.clearData();
     });
 
     // 帮助图标点击事件
@@ -1529,12 +1517,7 @@ class SidebarFlowManager {
         document.getElementById('generatedEmail').value = response.email;
 
         // 自动复制到剪切板
-        try {
-          await navigator.clipboard.writeText(response.email);
-          this.showNotification('邮箱已生成并复制到剪切板', 'success');
-        } catch (clipboardError) {
-          this.showNotification('邮箱已生成，但复制失败', 'warning');
-        }
+        await this.copyToClipboard(response.email, '邮箱已生成并复制到剪切板', '邮箱已生成，但复制失败');
 
         this.loadEmailHistory();
       } else {
@@ -1546,12 +1529,10 @@ class SidebarFlowManager {
   }
 
   // 复制邮箱
-  copyEmail() {
+  async copyEmail() {
     const emailInput = document.getElementById('generatedEmail');
     if (emailInput.value) {
-      navigator.clipboard.writeText(emailInput.value).then(() => {
-        this.showNotification('邮箱地址已复制', 'success');
-      });
+      await this.copyToClipboard(emailInput.value, '邮箱地址已复制');
     }
   }
 
@@ -1608,22 +1589,28 @@ class SidebarFlowManager {
   // 导出数据
   async exportData() {
     try {
-      const flows = await this.loadFlows();
+      // 并行获取流程和设置数据
+      const [flows, settingsResponse] = await Promise.all([
+        this.loadFlows(),
+        chrome.runtime.sendMessage({ action: 'getSettings' })
+      ]);
+
       const data = {
+        settings: settingsResponse.success ? settingsResponse.settings : {},
         flows: flows,
         exportTime: new Date().toISOString(),
-        version: '1.0'
+        version: '2.0'
       };
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `automation-flows-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `all-data-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
 
-      this.showNotification('数据导出成功', 'success');
+      this.showNotification('所有数据导出成功', 'success');
     } catch (error) {
       this.showNotification('导出失败: ' + error.message, 'error');
     }
@@ -1642,6 +1629,15 @@ class SidebarFlowManager {
         const text = await file.text();
         const data = JSON.parse(text);
 
+        // 导入设置数据
+        if (data.settings) {
+          await chrome.runtime.sendMessage({
+            action: 'saveSettings',
+            settings: data.settings
+          });
+        }
+
+        // 导入流程数据
         if (data.flows && Array.isArray(data.flows)) {
           for (const flow of data.flows) {
             await chrome.runtime.sendMessage({
@@ -1649,12 +1645,16 @@ class SidebarFlowManager {
               flow: flow
             });
           }
-          await this.loadFlows();
-          this.renderFlows();
-          this.showNotification('数据导入成功', 'success');
-        } else {
-          this.showNotification('无效的数据格式', 'error');
         }
+
+        // 刷新页面数据
+        await this.loadFlows();
+        this.renderFlows();
+        if (this.currentPage === 'settings') {
+          await this.loadSettings();
+        }
+
+        this.showNotification('所有数据导入成功', 'success');
       } catch (error) {
         this.showNotification('导入失败: ' + error.message, 'error');
       }
@@ -1715,29 +1715,8 @@ class SidebarFlowManager {
     });
   }
 
-  // 清空数据
-  async clearData() {
-    if (confirm('确定要清空所有数据吗？此操作不可恢复。')) {
-      try {
-        // 清空流程数据
-        for (const flow of this.flows) {
-          await chrome.runtime.sendMessage({
-            action: 'deleteAutomationFlow',
-            flowId: flow.id
-          });
-        }
-
-        // 清空历史数据
-        await chrome.runtime.sendMessage({ action: 'clearHistory' });
-
-        await this.loadFlows();
-        this.renderFlows();
-        this.showNotification('所有数据已清空', 'success');
-      } catch (error) {
-        this.showNotification('清空失败: ' + error.message, 'error');
-      }
-    }
-  }
+  // 注意：清空所有数据功能已移除
+  // 用户可以通过导出数据进行备份，然后手动删除各个流程和历史记录
 
   // 显示Cloudflare配置指南
   showCloudflareGuide() {
@@ -1785,13 +1764,7 @@ class SidebarFlowManager {
 
   // 从历史记录复制邮箱
   async copyEmailFromHistory(email) {
-    try {
-      await navigator.clipboard.writeText(email);
-      this.showNotification('邮箱地址已复制', 'success');
-    } catch (error) {
-      console.error('复制邮箱失败:', error);
-      this.showNotification('复制失败', 'error');
-    }
+    await this.copyToClipboard(email, '邮箱地址已复制');
   }
 
   // 删除单个邮箱历史记录
@@ -1852,13 +1825,11 @@ class SidebarFlowManager {
         this.addLog(`邮箱生成成功: ${response.email}`, 'success');
 
         // 自动复制到剪切板
-        try {
-          await navigator.clipboard.writeText(response.email);
-          this.showNotification('邮箱已生成并复制到剪切板', 'success');
+        const copySuccess = await this.copyToClipboard(response.email, '邮箱已生成并复制到剪切板', '邮箱已生成，但复制失败');
+        if (copySuccess) {
           this.addLog('邮箱地址已复制到剪切板', 'success');
-        } catch (clipboardError) {
-          this.showNotification('邮箱已生成，但复制失败', 'warning');
-          this.addLog('复制到剪切板失败: ' + clipboardError.message, 'warn');
+        } else {
+          this.addLog('复制到剪切板失败', 'warn');
         }
       } else {
         this.showNotification('生成邮箱失败: ' + response.error, 'error');
@@ -1889,13 +1860,11 @@ class SidebarFlowManager {
         this.addLog(`验证码获取成功: ${response.code}`, 'success');
 
         // 自动复制到剪切板
-        try {
-          await navigator.clipboard.writeText(response.code);
-          this.showNotification('验证码已获取并复制到剪切板', 'success');
+        const copySuccess = await this.copyToClipboard(response.code, '验证码已获取并复制到剪切板', '验证码已获取，但复制失败');
+        if (copySuccess) {
           this.addLog('验证码已复制到剪切板', 'success');
-        } catch (clipboardError) {
-          this.showNotification('验证码已获取，但复制失败', 'warning');
-          this.addLog('复制验证码失败: ' + clipboardError.message, 'warn');
+        } else {
+          this.addLog('复制验证码失败', 'warn');
         }
       } else {
         // 检查是否是用户主动停止
@@ -1983,6 +1952,9 @@ class SidebarFlowManager {
           console.log('设置PIN码输入框:', settings.pinCode);
         }
 
+        // 绑定失焦自动保存事件
+        this.bindSettingsAutoSave();
+
         // 状态显示已移除，不需要更新
       } else {
         console.error('获取设置失败:', response.error);
@@ -1992,46 +1964,72 @@ class SidebarFlowManager {
     }
   }
 
+  // 绑定设置项失焦自动保存事件
+  bindSettingsAutoSave() {
+    const domainsInput = document.getElementById('domainsInput');
+    const targetEmailInput = document.getElementById('targetEmailInput');
+    const pinCodeInput = document.getElementById('pinCodeInput');
+
+    // 防抖保存函数
+    const debouncedSave = this.debounce(async () => {
+      await this.saveSettings();
+    }, 500);
+
+    // 移除之前的事件监听器（如果存在）
+    if (domainsInput && !domainsInput.hasAttribute('data-autosave-bound')) {
+      domainsInput.addEventListener('blur', debouncedSave);
+      domainsInput.setAttribute('data-autosave-bound', 'true');
+    }
+    if (targetEmailInput && !targetEmailInput.hasAttribute('data-autosave-bound')) {
+      targetEmailInput.addEventListener('blur', debouncedSave);
+      targetEmailInput.setAttribute('data-autosave-bound', 'true');
+    }
+    if (pinCodeInput && !pinCodeInput.hasAttribute('data-autosave-bound')) {
+      pinCodeInput.addEventListener('blur', debouncedSave);
+      pinCodeInput.setAttribute('data-autosave-bound', 'true');
+    }
+  }
+
+  // 防抖函数
+  debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
   // 保存设置
   async saveSettings() {
     try {
+      const domainsInput = document.getElementById('domainsInput');
+      const targetEmailInput = document.getElementById('targetEmailInput');
+      const pinCodeInput = document.getElementById('pinCodeInput');
+
       const settings = {
-        domains: document.getElementById('domainsInput').value.trim(),
-        targetEmail: document.getElementById('targetEmailInput').value.trim(),
-        pinCode: document.getElementById('pinCodeInput').value.trim(),
-        autoGenerateEmail: true // 默认自动生成邮箱
+        domains: domainsInput ? domainsInput.value.trim() : '',
+        targetEmail: targetEmailInput ? targetEmailInput.value.trim() : '',
+        pinCode: pinCodeInput ? pinCodeInput.value.trim() : ''
       };
 
+      console.log('保存设置:', settings);
       const response = await chrome.runtime.sendMessage({
         action: 'saveSettings',
         settings: settings
       });
 
       if (response.success) {
-        this.showNotification('设置保存成功', 'success');
-        // 状态显示已移除，不需要更新
+        console.log('设置保存成功');
+        // 可以在这里添加成功提示，但为了不打扰用户，暂时只记录日志
       } else {
-        this.showNotification('保存设置失败: ' + response.error, 'error');
+        console.error('设置保存失败:', response.error);
       }
     } catch (error) {
-      this.showNotification('保存设置失败: ' + error.message, 'error');
-    }
-  }
-
-  // 重置设置
-  async resetSettings() {
-    if (confirm('确定要重置所有设置吗？此操作不可恢复。')) {
-      try {
-        const response = await chrome.runtime.sendMessage({ action: 'resetSettings' });
-        if (response.success) {
-          this.showNotification('设置已重置', 'success');
-          this.loadSettings();
-        } else {
-          this.showNotification('重置设置失败: ' + response.error, 'error');
-        }
-      } catch (error) {
-        this.showNotification('重置设置失败: ' + error.message, 'error');
-      }
+      console.error('保存设置时发生错误:', error);
     }
   }
 
@@ -2540,23 +2538,27 @@ class SidebarFlowManager {
     console.log('🧹 清理完成');
   }
 
-  // 复制到剪切板（带备用方法）
-  copyToClipboard(text) {
-    // 方法1：使用现代API
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.showNotification('选择器已复制到剪切板', 'success');
-      }).catch(() => {
-        this.fallbackCopyToClipboard(text);
-      });
-    } else {
-      // 方法2：备用方法
-      this.fallbackCopyToClipboard(text);
+  // 通用剪贴板复制方法（焦点检查+降级）
+  async copyToClipboard(text, successMessage = '已复制到剪切板', errorMessage = '复制失败') {
+    try {
+      // 方法1：尝试现代API（需要焦点）
+      if (navigator.clipboard && document.hasFocus()) {
+        await navigator.clipboard.writeText(text);
+        this.showNotification(successMessage, 'success');
+        return true;
+      }
+
+      // 方法2：降级到传统方法
+      return this.fallbackCopyToClipboard(text, successMessage, errorMessage);
+    } catch (error) {
+      console.error('复制失败:', error);
+      // 降级到传统方法
+      return this.fallbackCopyToClipboard(text, successMessage, errorMessage);
     }
   }
 
-  // 备用复制方法
-  fallbackCopyToClipboard(text) {
+  // 传统剪贴板复制方法
+  fallbackCopyToClipboard(text, successMessage, errorMessage) {
     try {
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -2571,13 +2573,22 @@ class SidebarFlowManager {
       document.body.removeChild(textArea);
 
       if (successful) {
-        this.showNotification('选择器已复制到剪切板', 'success');
+        this.showNotification(successMessage, 'success');
+        return true;
       } else {
-        this.showNotification('选择器已填充到输入框', 'info');
+        this.showNotification(errorMessage, 'warning');
+        return false;
       }
     } catch (err) {
-      this.showNotification('选择器已填充到输入框', 'info');
+      console.error('传统复制方法失败:', err);
+      this.showNotification(errorMessage, 'error');
+      return false;
     }
+  }
+
+  // 复制选择器到剪切板（保持向后兼容）
+  copySelectorToClipboard(text) {
+    return this.copyToClipboard(text, '选择器已复制到剪切板', '选择器已填充到输入框');
   }
 
   // 显示通知

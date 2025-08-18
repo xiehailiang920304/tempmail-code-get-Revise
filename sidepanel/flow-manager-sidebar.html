@@ -187,11 +187,10 @@
 
                     <!-- 邮箱域名配置 -->
                     <div class="settings-group">
-                        <h3>📧 邮箱域名配置</h3>
+                        <h3>📧 邮箱域名配置 <span class="help-icon" title="点击查看Cloudflare配置指南">❓</span></h3>
                         <div class="form-group">
                             <label for="domainsInput">
                                 可用域名:
-                                <span class="help-icon" title="点击查看Cloudflare配置指南">❓</span>
                             </label>
                             <input type="text" id="domainsInput" placeholder="domain1.com,domain2.com,domain3.com">
                             <div class="form-help">多个域名用中文逗号（，）或英文逗号（,）分隔，生成邮箱时随机选择（不需要@符号）</div>
@@ -212,15 +211,8 @@
                         <!-- 数据管理按钮 -->
                         <div class="form-group">
                             <div class="button-group">
-                                <button id="saveSettingsBtn" class="btn btn-primary">💾 保存设置</button>
-                                <button id="resetSettingsBtn" class="btn btn-secondary">🔄 重置设置</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="button-group">
                                 <button id="exportDataBtn" class="btn btn-secondary">📤 导出所有数据</button>
                                 <button id="importDataBtn" class="btn btn-secondary">📥 导入数据</button>
-                                <button id="clearDataBtn" class="btn btn-danger">🗑️ 清空所有数据</button>
                             </div>
                         </div>
                     </div>
@@ -392,43 +384,175 @@
                 </div>
                 <div class="modal-body" style="overflow-y: auto;">
                     <div class="guide-content">
+                        <!-- 第一步：设置PIN码 -->
                         <div class="guide-section">
-                            <h4>📋 配置步骤</h4>
+                            <h4>🔑 第一步：设置TempMail.plus PIN码</h4>
                             <ol>
-                                <li><strong>登录Cloudflare</strong>：访问 <a href="https://dash.cloudflare.com" target="_blank">dash.cloudflare.com</a></li>
-                                <li><strong>选择域名</strong>：点击要配置的域名</li>
-                                <li><strong>进入邮件设置</strong>：左侧菜单 → Email → Email Routing</li>
-                                <li><strong>启用邮件路由</strong>：点击"Enable Email Routing"</li>
-                                <li><strong>添加目标邮箱</strong>：在"Destination addresses"中添加您的真实邮箱</li>
-                                <li><strong>配置转发规则</strong>：设置 <code>*@yourdomain.com</code> → 您的邮箱</li>
-                                <li><strong>验证配置</strong>：发送测试邮件确认转发正常</li>
+                                <li><strong>访问官网</strong>：打开 <a href="https://tempmail.plus" target="_blank">tempmail.plus</a></li>
+                                <li><strong>生成临时邮箱</strong>：页面会自动生成一个临时邮箱地址</li>
+                                <li><strong>进入设置</strong>：点击页面上的"Settings"按钮</li>
+                                <li><strong>设置PIN码</strong>：
+                                    <ul>
+                                        <li>在"Set PIN-code"部分输入您想要的PIN码</li>
+                                        <li>PIN码可以是任意数字组合（建议6位数字）</li>
+                                        <li>点击确认设置PIN码</li>
+                                    </ul>
+                                </li>
+                                <li><strong>记录PIN码</strong>：将设置的PIN码记录下来，稍后需要填入插件配置</li>
+                                <li><strong>获取目标邮箱</strong>：复制当前显示的临时邮箱地址作为目标邮箱</li>
+                            </ol>
+                            <div class="alert alert-info">
+                                💡 <strong>提示：</strong>PIN码是您自己设置的密码，用于保护邮箱访问。请选择容易记住但不易被猜到的数字组合。
+                            </div>
+                        </div>
+
+                        <!-- 第二步：准备域名 -->
+                        <div class="guide-section">
+                            <h4>🌐 第二步：准备域名</h4>
+                            <ol>
+                                <li><strong>购买域名</strong>：从域名注册商（如Namecheap、GoDaddy等）购买域名</li>
+                                <li><strong>添加到Cloudflare</strong>：
+                                    <ul>
+                                        <li>登录 <a href="https://dash.cloudflare.com" target="_blank">Cloudflare控制台</a></li>
+                                        <li>点击"Add a Site"按钮</li>
+                                        <li>输入您的域名（如：example.com）</li>
+                                        <li>选择免费计划</li>
+                                    </ul>
+                                </li>
+                                <li><strong>更改DNS服务器</strong>：
+                                    <ul>
+                                        <li>Cloudflare会显示两个DNS服务器地址</li>
+                                        <li>到域名注册商处修改DNS服务器为Cloudflare提供的地址</li>
+                                        <li>等待DNS生效（通常需要几分钟到24小时）</li>
+                                    </ul>
+                                </li>
                             </ol>
                         </div>
 
+                        <!-- 第三步：配置邮件转发 -->
                         <div class="guide-section">
-                            <h4>⚙️ 转发规则示例</h4>
-                            <div class="code-block">
-                                <strong>通配符规则：</strong><br>
-                                <code>*@yourdomain.com</code> → <code>your-email@tempmail.plus</code>
+                            <h4>📧 第三步：配置Cloudflare邮件转发</h4>
+                            <ol>
+                                <li><strong>进入邮件设置</strong>：
+                                    <ul>
+                                        <li>在Cloudflare控制台选择您的域名</li>
+                                        <li>左侧菜单点击"Email" → "Email Routing"</li>
+                                    </ul>
+                                </li>
+                                <li><strong>启用邮件路由</strong>：
+                                    <ul>
+                                        <li>点击"Enable Email Routing"按钮</li>
+                                        <li>Cloudflare会自动添加必要的MX记录</li>
+                                    </ul>
+                                </li>
+                                <li><strong>添加目标邮箱</strong>：
+                                    <ul>
+                                        <li>在"Destination addresses"部分点击"Add destination"</li>
+                                        <li>输入您的真实邮箱地址（如：your-email@tempmail.plus）</li>
+                                        <li>点击"Send verification email"</li>
+                                        <li>到邮箱中点击验证链接</li>
+                                    </ul>
+                                </li>
+                                <li><strong>创建转发规则</strong>：
+                                    <ul>
+                                        <li>在"Routing rules"部分点击"Create address"</li>
+                                        <li>输入：<code>*</code>（通配符，匹配所有邮箱）</li>
+                                        <li>选择刚才验证的目标邮箱</li>
+                                        <li>点击"Save"保存规则</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <!-- 第四步：测试验证 -->
+                        <div class="guide-section">
+                            <h4>✅ 第四步：测试验证</h4>
+                            <ol>
+                                <li><strong>发送测试邮件</strong>：
+                                    <ul>
+                                        <li>使用其他邮箱发送邮件到：<code>test@yourdomain.com</code></li>
+                                        <li>检查目标邮箱是否收到转发的邮件</li>
+                                    </ul>
+                                </li>
+                                <li><strong>使用插件测试</strong>：
+                                    <ul>
+                                        <li>在插件中填入域名配置</li>
+                                        <li>点击"生成邮箱"测试是否正常工作</li>
+                                        <li>尝试获取验证码功能</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <!-- 故障排除 -->
+                        <div class="guide-section">
+                            <h4>🔧 故障排除</h4>
+                            <div class="troubleshoot-item">
+                                <strong>❌ 问题：收不到转发邮件</strong>
+                                <ul>
+                                    <li>检查目标邮箱是否已验证</li>
+                                    <li>查看垃圾邮件文件夹</li>
+                                    <li>确认MX记录已正确设置</li>
+                                    <li>等待DNS完全生效（最多24小时）</li>
+                                </ul>
                             </div>
-                            <p>这样配置后，发送到任何 <code>xxx@yourdomain.com</code> 的邮件都会转发到您的目标邮箱。</p>
+                            <div class="troubleshoot-item">
+                                <strong>❌ 问题：PIN码无效</strong>
+                                <ul>
+                                    <li>确认PIN码与tempmail.plus中设置的一致</li>
+                                    <li>检查PIN码是否输入完整（无多余空格）</li>
+                                    <li>尝试重新设置PIN码并更新插件配置</li>
+                                    <li>确认目标邮箱地址与设置PIN码的邮箱一致</li>
+                                </ul>
+                            </div>
+                            <div class="troubleshoot-item">
+                                <strong>❌ 问题：域名无法添加到Cloudflare</strong>
+                                <ul>
+                                    <li>确认域名拼写正确</li>
+                                    <li>检查域名是否已被其他Cloudflare账户使用</li>
+                                    <li>联系域名注册商确认域名状态</li>
+                                </ul>
+                            </div>
                         </div>
 
+                        <!-- 配置示例 -->
                         <div class="guide-section">
-                            <h4>💡 使用建议</h4>
-                            <ul>
-                                <li>建议配置多个域名以提高可用性</li>
-                                <li>定期检查邮件转发是否正常工作</li>
-                                <li>可以为不同用途设置不同的转发规则</li>
-                                <li>注意Cloudflare的邮件转发限制</li>
-                            </ul>
+                            <h4>📝 配置示例</h4>
+                            <div class="example-config">
+                                <strong>多域名配置示例：</strong>
+                                <div class="code-block">
+                                    <strong>域名配置：</strong><br>
+                                    <code>example1.com,example2.com,example3.com</code><br><br>
+                                    <strong>目标邮箱：</strong><br>
+                                    <code>your-email@tempmail.plus</code><br><br>
+                                    <strong>PIN码：</strong><br>
+                                    <code>123456</code>
+                                </div>
+                                <p>配置完成后，插件会随机从这些域名中选择一个生成临时邮箱。</p>
+                            </div>
                         </div>
 
+                        <!-- 重要提示 -->
+                        <div class="guide-section">
+                            <h4>⚠️ 重要提示</h4>
+                            <div class="alert alert-warning">
+                                <ul>
+                                    <li><strong>安全性：</strong>请妥善保管PIN码，不要分享给他人</li>
+                                    <li><strong>限制：</strong>Cloudflare免费版每月有邮件转发数量限制</li>
+                                    <li><strong>备份：</strong>建议配置多个域名以提高可用性</li>
+                                    <li><strong>监控：</strong>定期检查邮件转发是否正常工作</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 相关链接 -->
                         <div class="guide-section">
                             <h4>🔗 相关链接</h4>
                             <ul>
-                                <li><a href="https://developers.cloudflare.com/email-routing/" target="_blank">Cloudflare邮件路由官方文档</a></li>
                                 <li><a href="https://tempmail.plus" target="_blank">TempMail.plus官网</a></li>
+                                <li><a href="https://dash.cloudflare.com" target="_blank">Cloudflare控制台</a></li>
+                                <li><a href="https://developers.cloudflare.com/email-routing/" target="_blank">Cloudflare邮件路由官方文档</a></li>
+                                <li><a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank">DNS记录配置指南</a></li>
                             </ul>
                         </div>
                     </div>
