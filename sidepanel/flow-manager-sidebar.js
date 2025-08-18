@@ -1589,15 +1589,15 @@ class SidebarFlowManager {
   // 导出数据
   async exportData() {
     try {
-      // 并行获取流程和设置数据
-      const [flows, settingsResponse] = await Promise.all([
-        this.loadFlows(),
-        chrome.runtime.sendMessage({ action: 'getSettings' })
-      ]);
+      // 先确保流程数据是最新的
+      await this.loadFlows();
+
+      // 获取设置数据
+      const settingsResponse = await chrome.runtime.sendMessage({ action: 'getSettings' });
 
       const data = {
         settings: settingsResponse.success ? settingsResponse.settings : {},
-        flows: flows,
+        flows: this.flows || [], // 使用实例变量
         exportTime: new Date().toISOString(),
         version: '2.0'
       };
@@ -1852,7 +1852,8 @@ class SidebarFlowManager {
       const response = await chrome.runtime.sendMessage({
         action: 'getVerificationCode',
         maxRetries: 10,
-        retryInterval: 3000
+        retryInterval: 3000,
+        openLinksOnFailure: true
       });
 
       if (response.success) {
@@ -1901,6 +1902,26 @@ class SidebarFlowManager {
   handleCodeProgress(progress) {
     if (progress.message) {
       this.addLog(progress.message, progress.error ? 'error' : progress.waiting ? 'warn' : 'info');
+    }
+
+    // 如果显示了邮件内容，在日志中展示详细信息
+    if (progress.mailContentDisplayed && progress.mailContent) {
+      const mailContent = progress.mailContent;
+
+      this.addLog('=== 邮件原始内容 ===', 'info');
+      this.addLog(`主题: ${mailContent.subject}`, 'info');
+      this.addLog(`文本内容: ${mailContent.text}`, 'info');
+
+      if (mailContent.html && mailContent.html.trim() !== '') {
+        this.addLog('HTML内容:', 'info');
+        // 显示HTML的前500个字符，避免日志过长
+        const htmlPreview = mailContent.html.length > 500
+          ? mailContent.html.substring(0, 500) + '...'
+          : mailContent.html;
+        this.addLog(htmlPreview, 'info');
+      }
+
+      this.addLog('=== 邮件内容结束 ===', 'info');
     }
   }
 

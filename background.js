@@ -322,7 +322,7 @@ class BackgroundService {
       this.isGettingCode = true;
       this.codeRequestController = new AbortController();
 
-      const { maxRetries = 5, retryInterval = 3000 } = message;
+      const { maxRetries = 5, retryInterval = 3000, openLinksOnFailure = false } = message;
 
       // 获取验证码，恢复进度回调用于首页显示
       const code = await apiManager.getVerificationCode(
@@ -340,7 +340,8 @@ class BackgroundService {
             console.log('发送进度消息失败:', error.message);
           }
         },
-        this.codeRequestController.signal
+        this.codeRequestController.signal,
+        openLinksOnFailure
       );
 
       this.isGettingCode = false;
@@ -410,12 +411,13 @@ class BackgroundService {
         progressCallback(progress);
       } : null;
 
-      // 获取验证码，传入包装后的进度回调
+      // 获取验证码，传入包装后的进度回调（自动化流程不启用链接打开功能）
       const code = await apiManager.getVerificationCode(
         maxRetries,
         retryInterval,
         wrappedProgressCallback,
-        this.codeRequestController.signal
+        this.codeRequestController.signal,
+        false // 自动化流程不启用链接打开功能
       );
 
       this.isGettingCode = false;
