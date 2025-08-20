@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>自动化流程管理 - 侧边栏</title>
     <link rel="stylesheet" href="flow-manager-sidebar.css">
 </head>
+
 <body>
     <div class="sidebar-container">
 
@@ -105,7 +107,8 @@
                         <div class="form-group">
                             <div class="history-header">
                                 <label>邮箱历史</label>
-                                <button id="clearAllEmailHistoryBtn" class="btn btn-danger btn-small" style="display: none;">清除全部</button>
+                                <button id="clearAllEmailHistoryBtn" class="btn btn-danger btn-small"
+                                    style="display: none;">清除全部</button>
                             </div>
                             <div class="email-history" id="emailHistory">
                                 <!-- 邮箱历史将在这里显示 -->
@@ -125,8 +128,8 @@
                             <h2>🤖 自动化流程管理</h2>
                         </div>
                         <div class="flow-actions">
-                            <button id="importFlowBtn2" class="btn btn-secondary">📥 导入流程</button>
-                            <button id="createFlowBtn2" class="btn btn-primary">➕ 创建新流程</button>
+                            <button id="importFlowBtn2" class="btn btn-secondary" title="导入流程">📥 导入流程</button>
+                            <button id="createFlowBtn2" class="btn btn-primary" title="创建新流程">➕ 创建新流程</button>
                         </div>
                     </div>
                 </section>
@@ -187,7 +190,7 @@
 
                     <!-- 邮箱域名配置 -->
                     <div class="settings-group">
-                        <h3>📧 邮箱域名配置 <span class="help-icon" title="点击查看Cloudflare配置指南">❓</span></h3>
+                        <h3>📧 邮箱域名配置 <span class="help-icon" title="点击查看Cloudflare配置指南">点击查看配置指南</span></h3>
                         <div class="form-group">
                             <label for="domainsInput">
                                 可用域名:
@@ -197,13 +200,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="targetEmailInput">目标邮箱:</label>
+                            <label for="targetEmailInput">目标邮箱(tempmail.plus临时邮箱):</label>
                             <input type="email" id="targetEmailInput" placeholder="your-email@tempmail.plus">
                             <div class="form-help">所有域名的邮件都会通过Cloudflare转发到这个邮箱地址</div>
                         </div>
 
                         <div class="form-group">
-                            <label for="pinCodeInput">PIN码:</label>
+                            <label for="pinCodeInput">PIN码(tempmail.plus邮箱PIN码):</label>
                             <input type="text" id="pinCodeInput" placeholder="您的tempmail.plus PIN码">
                             <div class="form-help">用于访问tempmail.plus API的PIN码</div>
                         </div>
@@ -284,10 +287,14 @@
                         <input type="text" class="step-name" placeholder="步骤名称" onclick="event.stopPropagation()">
                     </div>
                     <div class="step-actions">
-                        <button type="button" class="btn-icon move-up" title="上移" onclick="event.stopPropagation()">↑</button>
-                        <button type="button" class="btn-icon move-down" title="下移" onclick="event.stopPropagation()">↓</button>
-                        <button type="button" class="btn-icon duplicate" title="复制" onclick="event.stopPropagation()">📋</button>
-                        <button type="button" class="btn-icon delete" title="删除" onclick="event.stopPropagation()">🗑️</button>
+                        <button type="button" class="btn-icon move-up" title="上移"
+                            onclick="event.stopPropagation()">↑</button>
+                        <button type="button" class="btn-icon move-down" title="下移"
+                            onclick="event.stopPropagation()">↓</button>
+                        <button type="button" class="btn-icon duplicate" title="复制"
+                            onclick="event.stopPropagation()">📋</button>
+                        <button type="button" class="btn-icon delete" title="删除"
+                            onclick="event.stopPropagation()">🗑️</button>
                     </div>
                 </div>
 
@@ -327,8 +334,10 @@
                             <input type="text" class="step-value" placeholder="输入具体文本或使用下方变量">
                             <div class="variable-helpers">
                                 <div class="variable-buttons">
-                                    <button type="button" class="btn-variable" data-variable="{{email}}" title="插入邮箱变量">📧 邮箱</button>
-                                    <button type="button" class="btn-variable" data-variable="{{code}}" title="插入验证码变量">🔢 验证码</button>
+                                    <button type="button" class="btn-variable" data-variable="{{email}}"
+                                        title="插入邮箱变量">📧 邮箱</button>
+                                    <button type="button" class="btn-variable" data-variable="{{code}}"
+                                        title="插入验证码变量">🔢 验证码</button>
                                 </div>
                                 <button type="button" class="btn-help" title="变量说明">❓</button>
                             </div>
@@ -388,7 +397,8 @@
                         <div class="guide-section">
                             <h4>🔑 第一步：设置TempMail.plus PIN码</h4>
                             <ol>
-                                <li><strong>访问官网</strong>：打开 <a href="https://tempmail.plus" target="_blank">tempmail.plus</a></li>
+                                <li><strong>访问官网</strong>：打开 <a href="https://tempmail.plus"
+                                        target="_blank">tempmail.plus</a></li>
                                 <li><strong>生成临时邮箱</strong>：页面会自动生成一个临时邮箱地址</li>
                                 <li><strong>进入设置</strong>：点击页面上的"Settings"按钮</li>
                                 <li><strong>设置PIN码</strong>：
@@ -413,7 +423,8 @@
                                 <li><strong>购买域名</strong>：从域名注册商（如Namecheap、GoDaddy等）购买域名</li>
                                 <li><strong>添加到Cloudflare</strong>：
                                     <ul>
-                                        <li>登录 <a href="https://dash.cloudflare.com" target="_blank">Cloudflare控制台</a></li>
+                                        <li>登录 <a href="https://dash.cloudflare.com" target="_blank">Cloudflare控制台</a>
+                                        </li>
                                         <li>点击"Add a Site"按钮</li>
                                         <li>输入您的域名（如：example.com）</li>
                                         <li>选择免费计划</li>
@@ -551,8 +562,10 @@
                             <ul>
                                 <li><a href="https://tempmail.plus" target="_blank">TempMail.plus官网</a></li>
                                 <li><a href="https://dash.cloudflare.com" target="_blank">Cloudflare控制台</a></li>
-                                <li><a href="https://developers.cloudflare.com/email-routing/" target="_blank">Cloudflare邮件路由官方文档</a></li>
-                                <li><a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/" target="_blank">DNS记录配置指南</a></li>
+                                <li><a href="https://developers.cloudflare.com/email-routing/"
+                                        target="_blank">Cloudflare邮件路由官方文档</a></li>
+                                <li><a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/"
+                                        target="_blank">DNS记录配置指南</a></li>
                             </ul>
                         </div>
                     </div>
@@ -605,4 +618,5 @@
 
     <script src="flow-manager-sidebar.js"></script>
 </body>
+
 </html>

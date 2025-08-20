@@ -578,7 +578,8 @@ class FlowManager {
       description: stepItem.querySelector('.step-description').value,
       options: {
         delay: parseInt(stepItem.querySelector('.step-delay').value) || 500,
-        timeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000,
+        waitTimeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000, // 使用waitTimeout作为主要超时配置
+        timeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000, // 保持向后兼容
         clearFirst: stepItem.querySelector('.step-clear-first').checked,
         scrollIntoView: stepItem.querySelector('.step-scroll-into-view').checked
       }

@@ -932,7 +932,8 @@ class SidebarFlowManager {
         description: stepItem.querySelector('.step-description').value.trim(),
         options: {
           delay: parseInt(stepItem.querySelector('.step-delay').value) || 500,
-          timeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000,
+          waitTimeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000, // 使用waitTimeout作为主要超时配置
+          timeout: parseInt(stepItem.querySelector('.step-timeout').value) || 5000, // 保持向后兼容
           clearFirst: stepItem.querySelector('.step-clear-first').checked,
           scrollIntoView: stepItem.querySelector('.step-scroll-into-view').checked
         }
@@ -1044,28 +1045,43 @@ class SidebarFlowManager {
         return;
       }
 
-      // 创建临时流程用于测试
-      const testFlow = {
-        id: 'test-flow',
-        name: '测试流程',
-        steps: flowData,
+      // 收集基本信息
+      const flowName = document.getElementById('flowName').value.trim() || '测试流程';
+      const flowDomain = document.getElementById('flowDomain').value.trim() || '*';
+      const flowDescription = document.getElementById('flowDescription').value.trim() || '临时测试流程';
 
+      // 创建完整的临时流程用于测试
+      const testFlow = {
+        id: 'test-flow-' + Date.now(), // 使用时间戳确保唯一性
+        name: flowName,
+        domain: flowDomain,
+        description: flowDescription,
+        steps: flowData,
+        enabled: true,
+        variables: {},
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       };
+
+      console.log('准备测试流程:', testFlow);
 
       const response = await this.sendMessage({
         action: 'startAutomationFlow',
-        flowId: 'test-flow',
+        flowId: testFlow.id,
         tabId: tabs[0].id,
         testFlow: testFlow
       });
 
       if (response.success) {
-        this.showMessage('测试流程已开始', 'success');
+        this.showMessage('测试流程已开始，请查看执行日志', 'success');
+        console.log('测试流程启动成功，执行ID:', response.executionId);
       } else {
         this.showMessage('测试失败: ' + response.error, 'error');
+        console.error('测试流程启动失败:', response.error);
       }
     } catch (error) {
-      this.showMessage('测试失败', 'error');
+      console.error('测试流程异常:', error);
+      this.showMessage('测试失败: ' + error.message, 'error');
     }
   }
 

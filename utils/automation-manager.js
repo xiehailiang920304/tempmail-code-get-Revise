@@ -88,10 +88,18 @@ class AutomationManager {
 
     try {
       // 获取流程配置
-      const flow = await storageManager.getAutomationFlow(flowId);
-      if (!flow) {
-        sendResponse({ success: false, error: '流程配置不存在' });
-        return;
+      let flow;
+      if (message.testFlow) {
+        // 如果传递了testFlow参数，使用临时测试流程
+        flow = message.testFlow;
+        console.log('使用临时测试流程:', flow);
+      } else {
+        // 否则从存储中获取流程
+        flow = await storageManager.getAutomationFlow(flowId);
+        if (!flow) {
+          sendResponse({ success: false, error: '流程配置不存在' });
+          return;
+        }
       }
 
       // 确保content script已注入到目标标签页

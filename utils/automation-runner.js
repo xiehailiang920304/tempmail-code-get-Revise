@@ -308,7 +308,7 @@ class AutomationRunner {
 
       let result = await this.executeStepOnce(step);
 
-      // 成功执行，记录结果
+      // 记录结果（无论成功还是跳过）
       this.stepResults.push({
         stepIndex: this.currentStepIndex,
         stepId: step.id,
@@ -318,7 +318,9 @@ class AutomationRunner {
 
       // 记录步骤完成日志
       if (typeof automationLogger !== 'undefined') {
-        automationLogger.debug('步骤执行完成', {
+        const logLevel = result.skipped ? 'warn' : 'debug';
+        const logMessage = result.skipped ? '步骤已跳过' : '步骤执行完成';
+        automationLogger[logLevel](logMessage, {
           executionId: this.executionId,
           stepIndex: this.currentStepIndex,
           stepName: step.name,
@@ -328,7 +330,7 @@ class AutomationRunner {
       }
 
       this.sendProgress({
-        type: 'stepCompleted',
+        type: result.skipped ? 'stepSkipped' : 'stepCompleted',
         step: step,
         stepIndex: this.currentStepIndex,
         result: result
@@ -378,47 +380,47 @@ class AutomationRunner {
   async executeStepOnce(step) {
     let result;
     switch (step.type) {
-        case 'fillInput':
-          result = await this.fillInput(step);
-          break;
-        case 'clickButton':
-          result = await this.clickButton(step);
-          break;
-        case 'waitForElement':
-          result = await this.waitForElement(step);
-          break;
-        case 'humanVerification':
-          result = await this.handleHumanVerification(step);
-          break;
-        case 'delay':
-          result = await this.delay(step);
-          break;
-        case 'scroll':
-          result = await this.scroll(step);
-          break;
-        case 'hover':
-          result = await this.hover(step);
-          break;
-        case 'selectOption':
-          result = await this.selectOption(step);
-          break;
-        case 'uploadFile':
-          result = await this.uploadFile(step);
-          break;
-        case 'executeScript':
-          result = await this.executeScript(step);
-          break;
-        case 'waitForNavigation':
-          result = await this.waitForNavigation(step);
-          break;
-        case 'conditional':
-          result = await this.conditional(step);
-          break;
-        default:
-          throw new Error(`不支持的步骤类型: ${step.type}`);
-      }
+      case 'fillInput':
+        result = await this.fillInput(step);
+        break;
+      case 'clickButton':
+        result = await this.clickButton(step);
+        break;
+      case 'waitForElement':
+        result = await this.waitForElement(step);
+        break;
+      case 'humanVerification':
+        result = await this.handleHumanVerification(step);
+        break;
+      case 'delay':
+        result = await this.delay(step);
+        break;
+      case 'scroll':
+        result = await this.scroll(step);
+        break;
+      case 'hover':
+        result = await this.hover(step);
+        break;
+      case 'selectOption':
+        result = await this.selectOption(step);
+        break;
+      case 'uploadFile':
+        result = await this.uploadFile(step);
+        break;
+      case 'executeScript':
+        result = await this.executeScript(step);
+        break;
+      case 'waitForNavigation':
+        result = await this.waitForNavigation(step);
+        break;
+      case 'conditional':
+        result = await this.conditional(step);
+        break;
+      default:
+        throw new Error(`不支持的步骤类型: ${step.type}`);
+    }
 
-      return result;
+    return result;
   }
 
 
@@ -455,7 +457,7 @@ class AutomationRunner {
       step: step,
       executionId: this.executionId,
       message: step.description || '请完成人机验证后点击继续',
-      timeout: step.options?.timeout || 180000,
+      timeout: step.options?.waitTimeout || step.options?.timeout || 180000,
       skipable: step.options?.skipable || false,
       retryable: step.options?.retryable || true,
       hints: step.options?.hints || []
@@ -467,7 +469,7 @@ class AutomationRunner {
         action: 'showHumanVerification',
         step: step,
         executionId: this.executionId,
-        timeout: step.options?.timeout || 180000
+        timeout: step.options?.waitTimeout || step.options?.timeout || 180000
       });
     } catch (error) {
       console.debug('显示人机验证UI失败（可能是页面不支持）:', error.message);
@@ -480,8 +482,8 @@ class AutomationRunner {
     return new Promise((resolve, reject) => {
       this.pauseResolver = { resolve, reject };
 
-      // 设置超时（3分钟）
-      const timeout = step.options?.timeout || 180000; // 3分钟
+      // 设置超时，优先使用waitTimeout
+      const timeout = step.options?.waitTimeout || step.options?.timeout || 180000; // 优先使用waitTimeout，默认3分钟
       this.verificationTimeoutId = setTimeout(() => {
         if (this.status === 'paused') {
           this.status = 'running';
@@ -529,7 +531,7 @@ class AutomationRunner {
   // 启动元素检测
   startElementDetection(step, resolve, timeoutId) {
     let detectionCount = 0;
-    const maxDetections = Math.floor((step.options?.timeout || 180000) / 500); // 总检测次数
+    const maxDetections = Math.floor((step.options?.waitTimeout || step.options?.timeout || 180000) / 500); // 总检测次数
 
     this.elementDetectionInterval = setInterval(async () => {
       detectionCount++;
@@ -721,7 +723,7 @@ class AutomationRunner {
     // 停止正在进行的验证码获取
     if (this.backgroundInstance) {
       try {
-        this.backgroundInstance.handleStopGettingCode({}, () => {});
+        this.backgroundInstance.handleStopGettingCode({}, () => { });
         this.sendLog('🛑 已停止验证码获取过程', 'info');
       } catch (error) {
         console.error('停止验证码获取失败:', error);
@@ -813,7 +815,7 @@ class AutomationRunner {
   // 解析变量
   resolveVariable(value) {
     if (typeof value !== 'string') return value;
-    
+
     return value.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
       return this.context[varName] || match;
     });
@@ -911,16 +913,19 @@ class AutomationRunner {
           this.context.code = value;
           this.sendLog(`✅ 验证码获取成功: ${value}`, 'success');
         } else {
-          throw new Error(codeResult.error || '获取验证码失败');
+          this.sendLog(`❌ 获取验证码失败: ${codeResult.error || '获取验证码失败'}`, 'error');
+          this.sendLog(`⏭️ 跳过填充步骤，继续执行下一步`, 'warn');
+          return { success: false, error: `获取验证码失败: ${codeResult.error || '获取验证码失败'}`, skipped: true };
         }
       } catch (error) {
         this.sendLog(`❌ 获取验证码失败: ${error.message}`, 'error');
-        throw new Error(`获取验证码失败: ${error.message}`);
+        this.sendLog(`⏭️ 跳过填充步骤，继续执行下一步`, 'warn');
+        return { success: false, error: `获取验证码失败: ${error.message}`, skipped: true };
       }
     }
 
     // 使用等待机制：在超时时间内每500ms检查元素是否存在
-    const timeout = step.options?.timeout || 10000; // 默认10秒超时
+    const timeout = step.options?.waitTimeout || step.options?.timeout || 10000; // 优先使用waitTimeout
     const checkInterval = 500; // 固定500ms检查间隔
     const startTime = Date.now();
 
@@ -962,7 +967,9 @@ class AutomationRunner {
           });
 
           if (!fillResult.success) {
-            throw new Error(fillResult.error || '填充输入框失败');
+            this.sendLog(`❌ 填充输入框失败: ${fillResult.error}`, 'error');
+            this.sendLog(`⏭️ 跳过填充步骤，继续执行下一步`, 'warn');
+            return { success: false, error: fillResult.error || '填充输入框失败', skipped: true };
           }
 
           return { success: true, value: value };
@@ -977,8 +984,10 @@ class AutomationRunner {
       }
     }
 
-    // 超时未找到元素
-    throw new Error(`超时未找到元素: ${step.selector} (等待时间: ${timeout}ms)`);
+    // 超时未找到元素，继续执行下一步
+    this.sendLog(`⏰ 超时未找到元素: ${step.selector} (等待时间: ${timeout}ms)`, 'warn');
+    this.sendLog(`⏭️ 跳过填充步骤，继续执行下一步`, 'warn');
+    return { success: false, error: `超时未找到元素: ${step.selector}`, timeout: true, skipped: true };
   }
 
   // 点击按钮（等待机制）
@@ -988,7 +997,7 @@ class AutomationRunner {
     this.sendLog(`🖱️ 点击按钮: ${step.name}`, 'info');
 
     // 使用等待机制：在超时时间内每500ms检查元素是否存在且可点击
-    const timeout = step.options?.timeout || 10000; // 默认10秒超时
+    const timeout = step.options?.waitTimeout || step.options?.timeout || 10000; // 优先使用waitTimeout
     const checkInterval = 500; // 固定500ms检查间隔
     const startTime = Date.now();
 
@@ -1029,7 +1038,9 @@ class AutomationRunner {
           });
 
           if (!clickResult.success) {
-            throw new Error(clickResult.error || '点击按钮失败');
+            this.sendLog(`❌ 点击按钮失败: ${clickResult.error}`, 'error');
+            this.sendLog(`⏭️ 跳过点击步骤，继续执行下一步`, 'warn');
+            return { success: false, error: clickResult.error || '点击按钮失败', skipped: true };
           }
 
           return { success: true };
@@ -1044,18 +1055,31 @@ class AutomationRunner {
       }
     }
 
-    // 超时未找到可点击元素
-    throw new Error(`超时未找到可点击元素: ${step.selector} (等待时间: ${timeout}ms)`);
+    // 超时未找到可点击元素，继续执行下一步
+    this.sendLog(`⏰ 超时未找到可点击元素: ${step.selector} (等待时间: ${timeout}ms)`, 'warn');
+    this.sendLog(`⏭️ 跳过点击步骤，继续执行下一步`, 'warn');
+    return { success: false, error: `超时未找到可点击元素: ${step.selector}`, timeout: true, skipped: true };
   }
 
   // 等待元素出现
   async waitForElement(step) {
+    this.sendLog(`⏳ 等待元素出现: ${step.name}`, 'info');
+
+    // 使用高级选项中的等待超时时间
+    const timeout = step.options?.waitTimeout || step.options?.timeout || 10000;
+    const options = {
+      ...step.options,
+      timeout: timeout
+    };
+
+    this.sendLog(`⏳ 等待元素: ${step.selector} (超时: ${timeout}ms)`, 'info');
+
     // 发送消息到content script执行
     const result = await new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(this.tabId, {
         action: 'waitForElement',
         selector: step.selector,
-        options: step.options || {}
+        options: options
       }, (response) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
@@ -1066,10 +1090,20 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '等待元素失败');
+      // 超时或失败时继续执行下一步
+      this.sendLog(`⏰ 等待元素超时或失败: ${result.error}`, 'warn');
+      this.sendLog(`⏭️ 跳过等待步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '等待元素失败', timeout: true, skipped: true };
     }
 
-    return { success: true, found: result.found };
+    if (result.found) {
+      this.sendLog(`✅ 元素已找到: ${step.selector}`, 'success');
+    } else {
+      this.sendLog(`⏰ 等待超时，元素未找到: ${step.selector}`, 'warn');
+      this.sendLog(`⏭️ 跳过等待步骤，继续执行下一步`, 'warn');
+    }
+
+    return { success: true, found: result.found, timeout: !result.found };
   }
 
   // 延迟步骤
@@ -1081,6 +1115,8 @@ class AutomationRunner {
 
   // 滚动页面
   async scroll(step) {
+    this.sendLog(`📜 滚动页面: ${step.name}`, 'info');
+
     const result = await new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(this.tabId, {
         action: 'scroll',
@@ -1096,7 +1132,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '滚动操作失败');
+      this.sendLog(`❌ 滚动操作失败: ${result.error}`, 'error');
+      this.sendLog(`⏭️ 跳过滚动步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '滚动操作失败', skipped: true };
     }
 
     return { success: true };
@@ -1104,6 +1142,8 @@ class AutomationRunner {
 
   // 鼠标悬停
   async hover(step) {
+    this.sendLog(`🖱️ 鼠标悬停: ${step.name}`, 'info');
+
     const result = await new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(this.tabId, {
         action: 'hover',
@@ -1119,7 +1159,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '悬停操作失败');
+      this.sendLog(`❌ 鼠标悬停失败: ${result.error}`, 'error');
+      this.sendLog(`⏭️ 跳过悬停步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '悬停操作失败', skipped: true };
     }
 
     return { success: true };
@@ -1127,6 +1169,8 @@ class AutomationRunner {
 
   // 选择下拉选项
   async selectOption(step) {
+    this.sendLog(`📋 选择下拉选项: ${step.name}`, 'info');
+
     const value = this.resolveVariable(step.value);
 
     const result = await new Promise((resolve, reject) => {
@@ -1145,7 +1189,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '选择选项失败');
+      this.sendLog(`❌ 选择选项失败: ${result.error}`, 'error');
+      this.sendLog(`⏭️ 跳过选择步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '选择选项失败', skipped: true };
     }
 
     return { success: true, value: value };
@@ -1153,6 +1199,8 @@ class AutomationRunner {
 
   // 上传文件
   async uploadFile(step) {
+    this.sendLog(`📁 上传文件: ${step.name}`, 'info');
+
     const filePath = this.resolveVariable(step.value);
 
     const result = await new Promise((resolve, reject) => {
@@ -1171,7 +1219,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '文件上传失败');
+      this.sendLog(`❌ 上传文件失败: ${result.error}`, 'error');
+      this.sendLog(`⏭️ 跳过上传步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '文件上传失败', skipped: true };
     }
 
     return { success: true, filePath: filePath };
@@ -1179,6 +1229,8 @@ class AutomationRunner {
 
   // 执行自定义脚本
   async executeScript(step) {
+    this.sendLog(`⚙️ 执行自定义脚本: ${step.name}`, 'info');
+
     const script = this.resolveVariable(step.value);
 
     const result = await new Promise((resolve, reject) => {
@@ -1196,7 +1248,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '脚本执行失败');
+      this.sendLog(`❌ 脚本执行失败: ${result.error}`, 'error');
+      this.sendLog(`⏭️ 跳过脚本步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '脚本执行失败', skipped: true };
     }
 
     return { success: true, result: result.result };
@@ -1204,8 +1258,12 @@ class AutomationRunner {
 
   // 等待页面导航
   async waitForNavigation(step) {
-    const timeout = step.options?.timeout || 10000;
+    this.sendLog(`🧭 等待页面导航: ${step.name}`, 'info');
+
+    const timeout = step.options?.waitTimeout || step.options?.timeout || 10000; // 优先使用waitTimeout
     const expectedUrl = step.options?.expectedUrl;
+
+    this.sendLog(`⏳ 等待页面导航 (超时: ${timeout}ms)`, 'info');
 
     const result = await new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(this.tabId, {
@@ -1223,7 +1281,9 @@ class AutomationRunner {
     });
 
     if (!result.success) {
-      throw new Error(result.error || '等待导航失败');
+      this.sendLog(`⏰ 等待页面导航超时或失败: ${result.error}`, 'warn');
+      this.sendLog(`⏭️ 跳过导航步骤，继续执行下一步`, 'warn');
+      return { success: false, error: result.error || '等待导航失败', timeout: true, skipped: true };
     }
 
     return { success: true, url: result.url };
