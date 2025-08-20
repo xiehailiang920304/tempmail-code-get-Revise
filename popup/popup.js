@@ -285,6 +285,9 @@ class PopupManager {
     }
 
     try {
+      // 先清除验证码显示框内的内容
+      document.getElementById('codeInput').value = '';
+      
       this.isGettingCode = true;
       this.updateButtonStates(true);
       this.updateStatus('开始获取验证码...', 'working');
