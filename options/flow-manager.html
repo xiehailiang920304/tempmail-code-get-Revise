@@ -157,36 +157,32 @@
                             <input type="text" class="step-description" placeholder="描述这个步骤的作用">
                         </div>
                     </div>
-                    
-                    <!-- 高级选项 -->
-                    <details class="advanced-options">
-                        <summary>高级选项</summary>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>执行延迟(毫秒)</label>
-                                <input type="number" class="step-delay" min="0" max="10000" value="500">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>等待超时(毫秒)</label>
-                                <input type="number" class="step-timeout" min="1000" max="60000" value="5000">
-                            </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>执行延迟(毫秒)</label>
+                            <input type="number" class="step-delay" min="0" max="10000" value="500">
                         </div>
                         
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" class="step-clear-first"> 填入前清空
-                                </label>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" class="step-scroll-into-view" checked> 滚动到元素
-                                </label>
-                            </div>
+                        <div class="form-group">
+                            <label>等待超时(毫秒)</label>
+                            <input type="number" class="step-timeout" min="1000" max="60000" value="5000">
                         </div>
-                    </details>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" class="step-clear-first"> 填入前清空
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" class="step-scroll-into-view" checked> 滚动到元素
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </template>

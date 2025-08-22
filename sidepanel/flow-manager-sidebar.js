@@ -25,6 +25,9 @@ class SidebarFlowManager {
     this.renderLogs();
     this.setupConsoleCapture();
 
+    // 加载初始数据（邮箱和验证码）
+    await this.loadInitialData();
+
     this.addLog('侧边栏管理器初始化完成', 'success');
     console.log('SidebarFlowManager 初始化完成');
   }
@@ -98,6 +101,32 @@ class SidebarFlowManager {
       }
     } catch (error) {
       console.error('加载流程失败:', error);
+    }
+  }
+
+  // 加载初始数据（邮箱和验证码）
+  async loadInitialData() {
+    try {
+      // 获取上次的邮箱和验证码
+      const response = await this.sendMessage({ action: 'getLastData' });
+
+      if (response.success) {
+        if (response.lastEmail) {
+          const homeEmailInput = document.getElementById('homeEmailInput');
+          if (homeEmailInput) {
+            homeEmailInput.value = response.lastEmail;
+          }
+        }
+        if (response.lastCode) {
+          const homeCodeInput = document.getElementById('homeCodeInput');
+          if (homeCodeInput) {
+            homeCodeInput.value = response.lastCode;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('加载初始数据失败:', error);
+      this.addLog('加载初始数据失败: ' + error.message, 'error');
     }
   }
 
@@ -614,38 +643,100 @@ class SidebarFlowManager {
     document.getElementById('variableHelpModal').style.display = 'block';
   }
 
-  // 根据步骤类型更新字段启用状态
+  // 根据步骤类型更新字段显示状态
   updateStepFieldsState(stepItem, stepType) {
-    const selectorInput = stepItem.querySelector('.step-selector');
-    const selectorHelper = stepItem.querySelector('.selector-helper');
+    // 定义每种步骤类型适用的配置项
+    const stepFieldsConfig = {
+      fillInput: {
+        selector: true,
+        value: true,
+        delay: true,
+        timeout: true,
+        clearFirst: true,
+        scrollIntoView: true
+      },
+      clickButton: {
+        selector: true,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: true
+      },
+      waitForElement: {
+        selector: true,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: false
+      },
+      humanVerification: {
+        selector: false,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: false
+      }
+    };
 
-    if (!selectorInput || !selectorHelper) return;
+    const config = stepFieldsConfig[stepType] || stepFieldsConfig.fillInput;
 
-    if (stepType === 'humanVerification') {
-      // 人机验证步骤：禁用选择器相关字段
-      selectorInput.disabled = true;
-      selectorInput.style.backgroundColor = '#f5f5f5';
-      selectorInput.style.color = '#999';
-      selectorInput.placeholder = '人机验证步骤无需设置选择器';
+    // 获取所有配置项元素
+    const elements = {
+      selector: stepItem.querySelector('.step-selector')?.closest('.form-group'),
+      value: stepItem.querySelector('.step-value')?.closest('.form-group'),
+      delay: stepItem.querySelector('.step-delay')?.closest('.form-group'),
+      timeout: stepItem.querySelector('.step-timeout')?.closest('.form-group'),
+      clearFirst: stepItem.querySelector('.step-clear-first')?.closest('.form-group'),
+      scrollIntoView: stepItem.querySelector('.step-scroll-into-view')?.closest('.form-group')
+    };
 
-      selectorHelper.disabled = true;
-      selectorHelper.style.backgroundColor = '#f5f5f5';
-      selectorHelper.style.color = '#999';
-      selectorHelper.style.cursor = 'not-allowed';
-      selectorHelper.title = '人机验证步骤无需选择器助手';
-    } else {
-      // 其他步骤类型：启用选择器相关字段
-      selectorInput.disabled = false;
-      selectorInput.style.backgroundColor = '';
-      selectorInput.style.color = '';
-      selectorInput.placeholder = 'CSS选择器或XPath';
+    // 根据配置显示/隐藏配置项
+    Object.keys(elements).forEach(key => {
+      const element = elements[key];
+      if (element) {
+        if (config[key]) {
+          element.style.display = '';
+          element.style.opacity = '1';
+        } else {
+          element.style.display = 'none';
+          element.style.opacity = '0';
+        }
+      }
+    });
 
-      selectorHelper.disabled = false;
-      selectorHelper.style.backgroundColor = '';
-      selectorHelper.style.color = '';
-      selectorHelper.style.cursor = 'pointer';
-      selectorHelper.title = '选择器助手';
-    }
+    // 检查并调整form-row的布局
+    this.adjustFormRowLayout(stepItem);
+  }
+
+  // 调整form-row布局，确保隐藏元素后布局正常
+  adjustFormRowLayout(stepItem) {
+    const formRows = stepItem.querySelectorAll('.form-row');
+
+    formRows.forEach(row => {
+      const visibleGroups = Array.from(row.querySelectorAll('.form-group')).filter(
+        group => group.style.display !== 'none'
+      );
+
+      // 如果整行都没有可见元素，隐藏整行
+      if (visibleGroups.length === 0) {
+        row.style.display = 'none';
+      } else {
+        row.style.display = '';
+
+        // 如果只有一个可见元素，调整其宽度占满整行
+        if (visibleGroups.length === 1) {
+          visibleGroups[0].style.flex = '1';
+        } else {
+          // 多个可见元素时，恢复默认flex布局
+          visibleGroups.forEach(group => {
+            group.style.flex = '';
+          });
+        }
+      }
+    });
   }
 
   // 移动步骤
@@ -1860,6 +1951,8 @@ class SidebarFlowManager {
   // 首页获取验证码
   async getCodeForHome() {
     try {
+      // 清空以前的验证码
+      document.getElementById('homeCodeInput').value = '';
       // 显示停止按钮，隐藏获取按钮
       document.getElementById('homeGetCodeBtn').style.display = 'none';
       document.getElementById('homeStopCodeBtn').style.display = 'inline-block';
@@ -1874,7 +1967,6 @@ class SidebarFlowManager {
 
       if (response.success) {
         document.getElementById('homeCodeInput').value = response.code;
-        this.addLog(`验证码获取成功: ${response.code}`, 'success');
 
         // 自动复制到剪切板
         const copySuccess = await this.copyToClipboard(response.code, '验证码已获取并复制到剪切板', '验证码已获取，但复制失败');

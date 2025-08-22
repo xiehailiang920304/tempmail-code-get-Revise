@@ -424,6 +424,42 @@ body {
     padding: 16px;
 }
 
+/* 步骤配置中的form-row样式 */
+.step-content .form-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    margin-top: 12px;
+    transition: all 0.3s ease;
+}
+
+.step-content .form-row:first-child {
+    margin-top: 0;
+}
+
+.step-content .form-row .form-group {
+    transition: all 0.3s ease;
+}
+
+/* 修复复选框布局 */
+.step-content .form-row .form-group label {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.step-content .form-row .form-group input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .header-content {

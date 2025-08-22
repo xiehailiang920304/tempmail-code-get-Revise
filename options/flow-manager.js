@@ -514,7 +514,7 @@ class FlowManager {
   updateStepTypeIcon(selectElement) {
     const stepItem = selectElement.closest('.step-item');
     const iconElement = stepItem.querySelector('.step-type-icon');
-    
+
     const icons = {
       fillInput: '📝',
       clickButton: '👆',
@@ -526,8 +526,107 @@ class FlowManager {
       // selectOption: '📋',
       // conditional: '🔀'
     };
-    
+
     iconElement.textContent = icons[selectElement.value] || '❓';
+
+    // 根据步骤类型控制字段显示状态
+    this.updateStepFieldsState(stepItem, selectElement.value);
+  }
+
+  // 根据步骤类型更新字段显示状态
+  updateStepFieldsState(stepItem, stepType) {
+    // 定义每种步骤类型适用的配置项
+    const stepFieldsConfig = {
+      fillInput: {
+        selector: true,
+        value: true,
+        delay: true,
+        timeout: true,
+        clearFirst: true,
+        scrollIntoView: true
+      },
+      clickButton: {
+        selector: true,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: true
+      },
+      waitForElement: {
+        selector: true,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: false
+      },
+      humanVerification: {
+        selector: false,
+        value: false,
+        delay: true,
+        timeout: true,
+        clearFirst: false,
+        scrollIntoView: false
+      }
+    };
+
+    const config = stepFieldsConfig[stepType] || stepFieldsConfig.fillInput;
+
+    // 获取所有配置项元素
+    const elements = {
+      selector: stepItem.querySelector('.step-selector')?.closest('.form-group'),
+      value: stepItem.querySelector('.step-value')?.closest('.form-group'),
+      delay: stepItem.querySelector('.step-delay')?.closest('.form-group'),
+      timeout: stepItem.querySelector('.step-timeout')?.closest('.form-group'),
+      clearFirst: stepItem.querySelector('.step-clear-first')?.closest('.form-group'),
+      scrollIntoView: stepItem.querySelector('.step-scroll-into-view')?.closest('.form-group')
+    };
+
+    // 根据配置显示/隐藏配置项
+    Object.keys(elements).forEach(key => {
+      const element = elements[key];
+      if (element) {
+        if (config[key]) {
+          element.style.display = '';
+          element.style.opacity = '1';
+        } else {
+          element.style.display = 'none';
+          element.style.opacity = '0';
+        }
+      }
+    });
+
+    // 检查并调整form-row的布局
+    this.adjustFormRowLayout(stepItem);
+  }
+
+  // 调整form-row布局，确保隐藏元素后布局正常
+  adjustFormRowLayout(stepItem) {
+    const formRows = stepItem.querySelectorAll('.form-row');
+
+    formRows.forEach(row => {
+      const visibleGroups = Array.from(row.querySelectorAll('.form-group')).filter(
+        group => group.style.display !== 'none'
+      );
+
+      // 如果整行都没有可见元素，隐藏整行
+      if (visibleGroups.length === 0) {
+        row.style.display = 'none';
+      } else {
+        row.style.display = '';
+
+        // 如果只有一个可见元素，调整其宽度占满整行
+        if (visibleGroups.length === 1) {
+          visibleGroups[0].style.flex = '1';
+        } else {
+          // 多个可见元素时，恢复默认flex布局
+          visibleGroups.forEach(group => {
+            group.style.flex = '';
+          });
+        }
+      }
+    });
   }
 
   // 移动步骤
