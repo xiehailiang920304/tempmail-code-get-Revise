@@ -324,22 +324,33 @@ class ApiManager {
   }
 
   // 获取最新邮件中的验证码
-  async getLatestMailCode(openLinksOnFailure = false) {
+  async getLatestMailCode(openLinksOnFailure = false, customEmail = null) {
     try {
       // 从正确的键名读取配置
       const result = await chrome.storage.local.get(['emailConfig', 'tempMailConfig']);
       const emailConfig = result.emailConfig || {};
       const tempMailConfig = result.tempMailConfig || {};
 
-      const email = emailConfig.targetEmail;
+      // 确定用于API调用的邮箱地址
+      let apiEmail = emailConfig.targetEmail; // 默认使用配置中的tempmail.plus邮箱
+      let emailForHistory = customEmail || emailConfig.targetEmail; // 用于历史记录的邮箱
+
+      // 如果传入了自定义邮箱，检查是否是tempmail相关域名
+      if (customEmail && (customEmail.includes('@tempmail.plus') || customEmail.includes('@mailto.plus'))) {
+        // 如果是tempmail相关邮箱，直接使用它进行API调用
+        apiEmail = customEmail;
+      }
+      // 如果是其他域名邮箱，仍然使用配置中的tempmail邮箱进行API调用
+      // 因为其他域名的邮件会通过Cloudflare转发到tempmail邮箱
+
       const epin = tempMailConfig.epin || '';
 
-      if (!email) {
-        throw new Error('未配置目标邮箱地址，请在设置页面配置');
+      if (!apiEmail) {
+        throw new Error('未配置目标邮箱地址，请在设置页面配置tempmail.plus邮箱地址');
       }
 
-      // 获取邮件列表
-      const mailListData = await this.getMailList(email, epin);
+      // 获取邮件列表（使用tempmail.plus邮箱地址）
+      const mailListData = await this.getMailList(apiEmail, epin);
 
       if (!mailListData.result || !mailListData.first_id) {
         return null;
@@ -347,8 +358,8 @@ class ApiManager {
 
       const firstId = mailListData.first_id;
 
-      // 获取邮件详情
-      const mailDetailData = await this.getMailDetail(firstId, email, epin);
+      // 获取邮件详情（使用tempmail.plus邮箱地址）
+      const mailDetailData = await this.getMailDetail(firstId, apiEmail, epin);
 
       if (!mailDetailData.result) {
         return null;
@@ -369,11 +380,23 @@ class ApiManager {
       // 如果获取到验证码，尝试删除邮件
       if (code) {
         try {
-          await this.deleteMail(firstId, email, epin);
+          await this.deleteMail(firstId, apiEmail, epin);
           console.log('邮件删除成功');
         } catch (deleteError) {
           console.warn('删除邮件失败，但验证码已获取:', deleteError);
         }
+
+        // 保存到历史记录
+        if (this.storageManager) {
+          try {
+            await this.storageManager.saveLastCode(code);
+            await this.storageManager.addCodeToHistory(code, emailForHistory);
+            console.log('验证码历史记录保存成功');
+          } catch (historyError) {
+            console.warn('保存验证码历史记录失败:', historyError);
+          }
+        }
+
         return code;
       }
 
@@ -431,8 +454,8 @@ class ApiManager {
   }
 
   // 获取验证码（带重试机制）
-  async getVerificationCode(maxRetries = 5, retryInterval = 3000, onProgress = null, abortSignal = null, openLinksOnFailure = false) {
-    console.log('getVerificationCode调用参数:', { maxRetries, retryInterval, openLinksOnFailure });
+  async getVerificationCode(maxRetries = 5, retryInterval = 3000, onProgress = null, abortSignal = null, openLinksOnFailure = false, customEmail = null) {
+    console.log('getVerificationCode调用参数:', { maxRetries, retryInterval, openLinksOnFailure, customEmail });
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       // 检查是否被中断
@@ -450,9 +473,9 @@ class ApiManager {
         }
 
         // 每次尝试都启用链接打开功能（如果参数为true）
-        console.log(`第${attempt + 1}次尝试, openLinksOnFailure: ${openLinksOnFailure}`);
+        console.log(`第${attempt + 1}次尝试, openLinksOnFailure: ${openLinksOnFailure}, customEmail: ${customEmail}`);
 
-        const code = await this.getLatestMailCode(openLinksOnFailure);
+        const code = await this.getLatestMailCode(openLinksOnFailure, customEmail);
 
         if (code && typeof code === 'object' && code.type === 'LINKS_OPENED') {
           // 链接已打开，停止重试
@@ -503,16 +526,6 @@ class ApiManager {
               success: true,
               code: code
             });
-          }
-
-          // 保存到历史记录
-          if (this.storageManager) {
-            // 从emailConfig获取邮箱地址
-            const emailConfig = await this.storageManager.getConfig('emailConfig');
-            const email = emailConfig.targetEmail;
-
-            await this.storageManager.saveLastCode(code);
-            await this.storageManager.addCodeToHistory(code, email);
           }
 
           return code;
