@@ -1,3 +1,752 @@
+# 临时邮箱验证码获取工具 - 功能修订记录
+
+## 📋 修订概述
+
+本文档记录了对临时邮箱验证码获取工具的功能增强和代码修改，主要包括两个核心功能的新增：
+
+1. **邮箱复制功能增强** - 添加复制整体邮箱和只复制邮箱名的按钮
+2. **手动邮箱输入功能** - 支持手动输入或粘贴邮箱地址获取验证码
+
+---
+
+## 🎯 功能一：邮箱复制功能增强
+
+### 功能描述
+在邮箱生成区域的"生成新邮箱"按钮下方添加两个复制按钮：
+- **复制整体邮箱**：复制完整的邮箱地址（如：`lindagarcia123456@domain1.com`）
+- **只复制邮箱名**：只复制@符号前的部分（如：`lindagarcia123456`）
+
+### 代码修改详情
+
+#### 1. HTML结构修改 (`sidepanel/flow-manager-sidebar.html`)
+
+**修改位置**：第26-35行
+```html
+<div class="card-content">
+    <div class="email-display">
+        <input type="text" id="homeEmailInput" placeholder="点击生成邮箱或手动输入邮箱地址">
+        <button id="homeGenerateEmailBtn" class="btn btn-primary">生成新邮箱</button>
+    </div>
+    <div class="email-copy-buttons">
+        <button id="homeCopyFullEmailBtn" class="btn btn-secondary btn-small">复制整体邮箱</button>
+        <button id="homeCopyEmailNameBtn" class="btn btn-secondary btn-small">只复制邮箱名</button>
+    </div>
+</div>
+```
+
+**变更说明**：
+- 添加了新的容器 `email-copy-buttons`
+- 新增两个按钮元素，使用不同的ID进行区分
+
+#### 2. CSS样式添加 (`sidepanel/flow-manager-sidebar.css`)
+
+**修改位置**：第138-151行
+```css
+.email-copy-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: space-between;
+}
+
+.email-copy-buttons .btn {
+    flex: 1;
+    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+```
+
+**样式特点**：
+- 使用 flexbox 布局，两个按钮等宽分布
+- 添加适当的间距和过渡效果
+- 保持与现有UI风格的一致性
+
+#### 3. JavaScript功能实现 (`sidepanel/flow-manager-sidebar.js`)
+
+**事件监听器添加**（第1497-1504行）：
+```javascript
+// 邮箱复制按钮
+document.getElementById('homeCopyFullEmailBtn')?.addEventListener('click', () => {
+  this.copyFullEmail();
+});
+
+document.getElementById('homeCopyEmailNameBtn')?.addEventListener('click', () => {
+  this.copyEmailName();
+});
+```
+
+**复制功能函数**（第1960-1999行）：
+```javascript
+// 复制完整邮箱地址
+async copyFullEmail() {
+  const emailInput = document.getElementById('homeEmailInput');
+  if (!emailInput || !emailInput.value) {
+    this.showNotification('请先生成邮箱地址', 'warn');
+    return;
+  }
+
+  const fullEmail = emailInput.value;
+  const copySuccess = await this.copyToClipboard(fullEmail, '完整邮箱地址已复制到剪切板', '复制完整邮箱地址失败');
+  if (copySuccess) {
+    this.addLog(`完整邮箱地址已复制: ${fullEmail}`, 'success');
+  } else {
+    this.addLog('复制完整邮箱地址失败', 'warn');
+  }
+}
+
+// 复制邮箱名（@前面的部分）
+async copyEmailName() {
+  const emailInput = document.getElementById('homeEmailInput');
+  if (!emailInput || !emailInput.value) {
+    this.showNotification('请先生成邮箱地址', 'warn');
+    return;
+  }
+
+  const fullEmail = emailInput.value;
+  const atIndex = fullEmail.indexOf('@');
+  if (atIndex === -1) {
+    this.showNotification('邮箱格式不正确', 'error');
+    return;
+  }
+
+  const emailName = fullEmail.substring(0, atIndex);
+  const copySuccess = await this.copyToClipboard(emailName, '邮箱名已复制到剪切板', '复制邮箱名失败');
+  if (copySuccess) {
+    this.addLog(`邮箱名已复制: ${emailName}`, 'success');
+  } else {
+    this.addLog('复制邮箱名失败', 'warn');
+  }
+}
+```
+
+**功能特点**：
+- 完善的错误处理和用户反馈
+- 智能的邮箱格式验证
+- 详细的日志记录
+- 使用现有的通知系统
+
+---
+
+## 🎯 功能二：手动邮箱输入功能
+
+### 功能描述
+支持用户手动输入或粘贴邮箱地址到邮箱生成区域，然后点击"获取验证码"按钮获取相应邮箱的验证码。系统智能识别邮箱类型并采用相应的处理策略。
+
+### 核心设计理念
+
+**邮箱类型识别**：
+- **tempmail邮箱**（`@tempmail.plus` 或 `@mailto.plus`）：直接使用该邮箱调用API
+- **自定义域名邮箱**：使用配置中的tempmail邮箱调用API（通过Cloudflare转发）
+
+### 代码修改详情
+
+#### 1. HTML输入框修改 (`sidepanel/flow-manager-sidebar.html`)
+
+**修改位置**：第28行
+```html
+<!-- 修改前 -->
+<input type="text" id="homeEmailInput" readonly placeholder="点击生成邮箱地址">
+
+<!-- 修改后 -->
+<input type="text" id="homeEmailInput" placeholder="点击生成邮箱或手动输入邮箱地址">
+```
+
+**变更说明**：
+- 移除 `readonly` 属性，允许用户输入
+- 更新占位符文本，提示用户可以手动输入
+
+#### 2. CSS样式优化 (`sidepanel/flow-manager-sidebar.css`)
+
+**修改位置**：第153-173行
+```css
+.email-display input,
+.code-display input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.email-display input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    background: #ffffff;
+}
+
+.code-display input {
+    background: #f9f9f9;
+}
+```
+
+**样式特点**：
+- 为邮箱输入框添加焦点状态样式
+- 使用品牌色彩的边框和阴影效果
+- 保持验证码输入框的只读样式
+
+#### 3. JavaScript输入处理增强 (`sidepanel/flow-manager-sidebar.js`)
+
+**输入框事件监听器**（第1505-1531行）：
+```javascript
+// 邮箱输入框事件监听
+const homeEmailInput = document.getElementById('homeEmailInput');
+if (homeEmailInput) {
+  // 输入时自动去除空格
+  homeEmailInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.trim();
+  });
+
+  // 粘贴时自动去除空格
+  homeEmailInput.addEventListener('paste', (e) => {
+    setTimeout(() => {
+      e.target.value = e.target.value.trim();
+    }, 0);
+  });
+
+  // 失去焦点时验证邮箱格式
+  homeEmailInput.addEventListener('blur', (e) => {
+    const email = e.target.value.trim();
+    if (email && (!email.includes('@') || email.length < 5)) {
+      this.showNotification('邮箱格式不正确', 'warn');
+    }
+  });
+}
+```
+
+**获取验证码函数增强**（第2001-2062行）：
+```javascript
+// 首页获取验证码
+async getCodeForHome() {
+  try {
+    // 检查邮箱输入框是否有内容
+    const emailInput = document.getElementById('homeEmailInput');
+    if (!emailInput || !emailInput.value.trim()) {
+      this.showNotification('请先生成邮箱或手动输入邮箱地址', 'warn');
+      return;
+    }
+
+    const currentEmail = emailInput.value.trim();
+
+    // 简单的邮箱格式验证
+    if (!currentEmail.includes('@') || currentEmail.length < 5) {
+      this.showNotification('邮箱格式不正确', 'error');
+      return;
+    }
+
+    // 检查是否是tempmail相关邮箱
+    if (currentEmail.includes('@tempmail.plus') || currentEmail.includes('@mailto.plus')) {
+      this.addLog(`开始获取验证码（直接使用: ${currentEmail}）...`, 'info');
+    } else {
+      this.addLog(`开始获取验证码（邮箱: ${currentEmail}，通过Cloudflare转发到配置的tempmail邮箱）...`, 'info');
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'getVerificationCode',
+      targetEmail: currentEmail, // 传递当前邮箱地址
+      maxRetries: 10,
+      retryInterval: 3000,
+      openLinksOnFailure: true
+    });
+    // ... 后续处理逻辑
+  } catch (error) {
+    // ... 错误处理
+  }
+}
+```
+
+#### 4. 后台服务修改 (`background.js`)
+
+**消息处理函数增强**（第325-346行）：
+```javascript
+async handleGetVerificationCode(message, sendResponse) {
+  const { maxRetries = 5, retryInterval = 3000, openLinksOnFailure = false, targetEmail = null } = message;
+
+  const code = await apiManager.getVerificationCode(
+    maxRetries,
+    retryInterval,
+    progressCallback,
+    this.codeRequestController.signal,
+    openLinksOnFailure,
+    targetEmail  // 新增：传递目标邮箱地址
+  );
+}
+```
+
+#### 5. API管理器核心逻辑修改 (`utils/api.js`)
+
+**邮箱地址智能识别**（第334-350行）：
+```javascript
+// 确定用于API调用的邮箱地址
+let apiEmail = emailConfig.targetEmail; // 默认使用配置中的tempmail邮箱
+let emailForHistory = customEmail || emailConfig.targetEmail; // 用于历史记录的邮箱
+
+// 如果传入了自定义邮箱，检查是否是tempmail相关域名
+if (customEmail && (customEmail.includes('@tempmail.plus') || customEmail.includes('@mailto.plus'))) {
+  // 如果是tempmail相关邮箱，直接使用它进行API调用
+  apiEmail = customEmail;
+}
+// 如果是其他域名邮箱，仍然使用配置中的tempmail邮箱进行API调用
+// 因为其他域名的邮件会通过Cloudflare转发到tempmail邮箱
+```
+
+**历史记录保存优化**（第380-401行）：
+```javascript
+// 如果获取到验证码，尝试删除邮件
+if (code) {
+  try {
+    await this.deleteMail(firstId, apiEmail, epin);
+    console.log('邮件删除成功');
+  } catch (deleteError) {
+    console.warn('删除邮件失败，但验证码已获取:', deleteError);
+  }
+
+  // 保存到历史记录
+  if (this.storageManager) {
+    try {
+      await this.storageManager.saveLastCode(code);
+      await this.storageManager.addCodeToHistory(code, emailForHistory);
+      console.log('验证码历史记录保存成功');
+    } catch (historyError) {
+      console.warn('保存验证码历史记录失败:', historyError);
+    }
+  }
+
+  return code;
+}
+```
+
+---
+
+## 🔧 关键问题修复
+
+### 问题：JavaScript变量作用域错误
+
+**问题描述**：
+在获取验证码过程中出现 `emailForHistory is not defined` 错误，导致验证码获取失败。
+
+**根本原因**：
+变量 `emailForHistory` 在 `getLatestMailCode` 函数中定义，但在 `getVerificationCode` 函数中使用，存在作用域问题。
+
+**解决方案**：
+将历史记录保存逻辑从 `getVerificationCode` 函数移动到 `getLatestMailCode` 函数内部，确保变量在正确的作用域内使用。
+
+**修复代码**：
+```javascript
+// 修复前：在getVerificationCode中保存历史记录（错误）
+if (this.storageManager) {
+  await this.storageManager.saveLastCode(code);
+  await this.storageManager.addCodeToHistory(code, emailForHistory); // emailForHistory未定义
+}
+
+// 修复后：在getLatestMailCode中保存历史记录（正确）
+if (this.storageManager) {
+  try {
+    await this.storageManager.saveLastCode(code);
+    await this.storageManager.addCodeToHistory(code, emailForHistory); // emailForHistory已定义
+    console.log('验证码历史记录保存成功');
+  } catch (historyError) {
+    console.warn('保存验证码历史记录失败:', historyError);
+  }
+}
+```
+
+---
+
+## 📖 使用说明
+
+### 邮箱复制功能使用方法
+
+1. **生成邮箱**：点击"生成新邮箱"按钮
+2. **复制选择**：
+   - 点击"复制整体邮箱"：复制完整邮箱地址（如：`lindagarcia123456@domain1.com`）
+   - 点击"只复制邮箱名"：只复制用户名部分（如：`lindagarcia123456`）
+3. **状态反馈**：系统会显示复制成功的通知和日志记录
+
+### 手动邮箱输入功能使用方法
+
+#### 方式一：使用生成的邮箱
+1. 点击"生成新邮箱"按钮生成邮箱
+2. 点击"获取验证码"按钮
+3. 系统使用配置的tempmail邮箱获取验证码
+
+#### 方式二：手动输入tempmail邮箱
+1. 在邮箱输入框中输入tempmail邮箱（如：`user123@tempmail.plus`）
+2. 点击"获取验证码"按钮
+3. 系统直接使用输入的邮箱获取验证码
+
+#### 方式三：手动输入自定义域名邮箱
+1. 在邮箱输入框中输入自定义域名邮箱（如：`test@mydomain.com`）
+2. 点击"获取验证码"按钮
+3. 系统使用配置的tempmail邮箱获取验证码（通过Cloudflare转发）
+
+---
+
+## 🔍 技术细节
+
+### 邮箱类型识别逻辑
+
+```javascript
+// 邮箱类型判断
+if (customEmail && (customEmail.includes('@tempmail.plus') || customEmail.includes('@mailto.plus'))) {
+  // tempmail邮箱：直接使用
+  apiEmail = customEmail;
+} else {
+  // 自定义域名邮箱：使用配置的tempmail邮箱
+  apiEmail = emailConfig.targetEmail;
+}
+```
+
+### 数据流向图
+
+```
+用户输入邮箱
+    ↓
+邮箱类型识别
+    ↓
+┌─────────────────┬─────────────────┐
+│   tempmail邮箱   │  自定义域名邮箱   │
+│                │                │
+│ 直接API调用     │ 使用配置邮箱     │
+│ apiEmail =     │ apiEmail =      │
+│ customEmail    │ targetEmail     │
+└─────────────────┴─────────────────┘
+    ↓
+API调用获取验证码
+    ↓
+历史记录保存
+(emailForHistory = 用户输入的邮箱)
+```
+
+### 错误处理机制
+
+1. **输入验证**：
+   - 检查邮箱是否为空
+   - 验证邮箱基本格式（包含@符号，长度大于5）
+
+2. **API调用错误处理**：
+   - 网络请求失败重试
+   - 配置缺失提示
+   - 详细错误日志记录
+
+3. **历史记录保存错误处理**：
+   - 使用try-catch包装
+   - 保存失败不影响主要功能
+   - 详细错误日志记录
+
+### 用户体验优化
+
+1. **输入框增强**：
+   - 自动去除空格
+   - 焦点状态视觉反馈
+   - 实时格式验证
+
+2. **状态提示**：
+   - 清晰的操作反馈
+   - 详细的日志记录
+   - 智能的邮箱类型识别提示
+
+3. **错误提示**：
+   - 友好的错误消息
+   - 具体的操作指导
+   - 非阻塞式警告
+
+---
+
+## 📁 文件修改总览
+
+### 修改的文件列表
+
+| 文件路径 | 修改类型 | 主要变更 |
+|---------|---------|---------|
+| `sidepanel/flow-manager-sidebar.html` | 功能增强 | 添加复制按钮，移除输入框readonly属性 |
+| `sidepanel/flow-manager-sidebar.css` | 样式增强 | 新增按钮样式，优化输入框焦点效果 |
+| `sidepanel/flow-manager-sidebar.js` | 功能增强 | 新增复制函数，增强输入处理和验证码获取逻辑 |
+| `background.js` | 接口扩展 | 支持targetEmail参数传递 |
+| `utils/api.js` | 核心逻辑 | 邮箱类型识别，API调用优化，历史记录保存修复 |
+
+### 代码统计
+
+- **新增代码行数**：约 150 行
+- **修改代码行数**：约 50 行
+- **新增函数**：4 个
+- **修改函数**：6 个
+
+### 兼容性说明
+
+- ✅ **向后兼容**：所有原有功能保持不变
+- ✅ **配置兼容**：支持现有配置格式
+- ✅ **API兼容**：保持原有API调用方式
+- ✅ **数据兼容**：历史记录格式保持一致
+
+---
+
+## 🚀 版本信息
+
+**修订版本**：v1.4.1
+**修订日期**：2024年12月
+**修订类型**：功能增强 + 问题修复
+
+### 新增功能
+- ✅ 邮箱复制功能（复制整体邮箱 + 只复制邮箱名）
+- ✅ 手动邮箱输入功能
+- ✅ 智能邮箱类型识别
+- ✅ 增强的用户体验和错误处理
+
+### 修复问题
+- 🔧 JavaScript变量作用域错误
+- 🔧 历史记录保存逻辑优化
+- 🔧 API调用参数传递完善
+
+### 技术改进
+- 🎯 更清晰的代码结构
+- 🎯 更完善的错误处理
+- 🎯 更友好的用户反馈
+- 🎯 更详细的日志记录
+
+---
+
+## 📝 开发者注意事项
+
+### 测试建议
+1. **功能测试**：
+   - 测试复制按钮功能
+   - 测试手动输入各种邮箱格式
+   - 测试验证码获取流程
+
+2. **边界测试**：
+   - 空邮箱输入
+   - 无效邮箱格式
+   - 网络异常情况
+
+3. **兼容性测试**：
+   - 原有功能是否正常
+   - 配置迁移是否正确
+   - 历史记录是否完整
+
+### 维护建议
+1. **监控日志**：关注新增的日志输出，及时发现问题
+2. **用户反馈**：收集用户对新功能的使用反馈
+3. **性能监控**：观察新功能对整体性能的影响
+
+### 未来扩展方向
+1. **邮箱格式验证增强**：支持更多邮箱格式验证
+2. **批量操作支持**：支持批量邮箱处理
+3. **自定义复制格式**：允许用户自定义复制内容格式
+4. **邮箱模板功能**：支持邮箱地址模板保存和快速使用
+
+---
+
+*本文档记录了临时邮箱验证码获取工具的重要功能增强，为后续维护和开发提供详细的技术参考。*
+```
+```
+
+#### 4. 后台服务修改 (`background.js`)
+
+**消息处理函数增强**（第325-346行）：
+```javascript
+// 获取验证码（首页专用，支持进度显示）
+async handleGetVerificationCode(message, sendResponse) {
+  // ... 现有逻辑
+
+  const { maxRetries = 5, retryInterval = 3000, openLinksOnFailure = false, targetEmail = null } = message;
+
+  // 获取验证码，恢复进度回调用于首页显示
+  const code = await apiManager.getVerificationCode(
+    maxRetries,
+    retryInterval,
+    progressCallback,
+    this.codeRequestController.signal,
+    openLinksOnFailure,
+    targetEmail  // 新增：传递目标邮箱地址
+  );
+  // ... 后续处理
+}
+```
+
+**自动化流程支持**（第403-423行）：
+```javascript
+// 获取验证码（支持进度回调，用于自动化流程）
+async handleGetVerificationCodeWithProgress(message, sendResponse, progressCallback = null) {
+  const { maxRetries = 5, retryInterval = 3000, targetEmail = null } = message;
+
+  const code = await apiManager.getVerificationCode(
+    maxRetries,
+    retryInterval,
+    wrappedProgressCallback,
+    this.codeRequestController.signal,
+    false, // 自动化流程不启用链接打开功能
+    targetEmail  // 新增：传递目标邮箱地址
+  );
+  // ... 后续处理
+}
+```
+
+#### 5. API管理器核心逻辑修改 (`utils/api.js`)
+
+**邮箱地址智能识别**（第334-350行）：
+```javascript
+// 确定用于API调用的邮箱地址
+let apiEmail = emailConfig.targetEmail; // 默认使用配置中的tempmail邮箱
+let emailForHistory = customEmail || emailConfig.targetEmail; // 用于历史记录的邮箱
+
+// 如果传入了自定义邮箱，检查是否是tempmail相关域名
+if (customEmail && (customEmail.includes('@tempmail.plus') || customEmail.includes('@mailto.plus'))) {
+  // 如果是tempmail相关邮箱，直接使用它进行API调用
+  apiEmail = customEmail;
+}
+// 如果是其他域名邮箱，仍然使用配置中的tempmail邮箱进行API调用
+// 因为其他域名的邮件会通过Cloudflare转发到tempmail邮箱
+
+const epin = tempMailConfig.epin || '';
+
+if (!apiEmail) {
+  throw new Error('未配置目标邮箱地址，请在设置页面配置tempmail.plus邮箱地址');
+}
+```
+
+**API调用函数签名更新**（第434-436行）：
+```javascript
+// 获取验证码（带重试机制）
+async getVerificationCode(maxRetries = 5, retryInterval = 3000, onProgress = null, abortSignal = null, openLinksOnFailure = false, customEmail = null) {
+  console.log('getVerificationCode调用参数:', { maxRetries, retryInterval, openLinksOnFailure, customEmail });
+```
+
+**邮件获取函数更新**（第326-327行）：
+```javascript
+// 获取最新邮件中的验证码
+async getLatestMailCode(openLinksOnFailure = false, customEmail = null) {
+```
+```
+
+#### 3. JavaScript输入处理增强 (`sidepanel/flow-manager-sidebar.js`)
+
+**输入框事件监听器**（第1505-1531行）：
+```javascript
+// 邮箱输入框事件监听
+const homeEmailInput = document.getElementById('homeEmailInput');
+if (homeEmailInput) {
+  // 输入时自动去除空格
+  homeEmailInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.trim();
+  });
+
+  // 粘贴时自动去除空格
+  homeEmailInput.addEventListener('paste', (e) => {
+    setTimeout(() => {
+      e.target.value = e.target.value.trim();
+    }, 0);
+  });
+
+  // 失去焦点时验证邮箱格式
+  homeEmailInput.addEventListener('blur', (e) => {
+    const email = e.target.value.trim();
+    if (email && (!email.includes('@') || email.length < 5)) {
+      this.showNotification('邮箱格式不正确', 'warn');
+    }
+  });
+}
+```
+
+**获取验证码函数增强**（第2001-2062行）：
+```javascript
+// 首页获取验证码
+async getCodeForHome() {
+  try {
+    // 检查邮箱输入框是否有内容
+    const emailInput = document.getElementById('homeEmailInput');
+    if (!emailInput || !emailInput.value.trim()) {
+      this.showNotification('请先生成邮箱或手动输入邮箱地址', 'warn');
+      return;
+    }
+
+    const currentEmail = emailInput.value.trim();
+
+    // 简单的邮箱格式验证
+    if (!currentEmail.includes('@') || currentEmail.length < 5) {
+      this.showNotification('邮箱格式不正确', 'error');
+      return;
+    }
+
+    // 清空以前的验证码
+    document.getElementById('homeCodeInput').value = '';
+    // 显示停止按钮，隐藏获取按钮
+    document.getElementById('homeGetCodeBtn').style.display = 'none';
+    document.getElementById('homeStopCodeBtn').style.display = 'inline-block';
+
+    // 检查是否是tempmail相关邮箱
+    if (currentEmail.includes('@tempmail.plus') || currentEmail.includes('@mailto.plus')) {
+      this.addLog(`开始获取验证码（直接使用: ${currentEmail}）...`, 'info');
+    } else {
+      this.addLog(`开始获取验证码（邮箱: ${currentEmail}，通过Cloudflare转发到配置的tempmail邮箱）...`, 'info');
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'getVerificationCode',
+      targetEmail: currentEmail, // 传递当前邮箱地址
+      maxRetries: 10,
+      retryInterval: 3000,
+      openLinksOnFailure: true
+    });
+
+    // ... 后续处理逻辑
+  } catch (error) {
+    // ... 错误处理
+  }
+}
+```
+
+#### 4. 后台服务修改 (`background.js`)
+
+**消息处理函数增强**（第325-346行）：
+```javascript
+// 获取验证码（首页专用，支持进度显示）
+async handleGetVerificationCode(message, sendResponse) {
+  // ... 现有逻辑
+
+  const { maxRetries = 5, retryInterval = 3000, openLinksOnFailure = false, targetEmail = null } = message;
+
+  // 获取验证码，恢复进度回调用于首页显示
+  const code = await apiManager.getVerificationCode(
+    maxRetries,
+    retryInterval,
+    progressCallback,
+    this.codeRequestController.signal,
+    openLinksOnFailure,
+    targetEmail  // 新增：传递目标邮箱地址
+  );
+
+  // ... 后续处理
+}
+```
+
+**自动化流程支持**（第403-423行）：
+```javascript
+// 获取验证码（支持进度回调，用于自动化流程）
+async handleGetVerificationCodeWithProgress(message, sendResponse, progressCallback = null) {
+  // ... 现有逻辑
+
+  const { maxRetries = 5, retryInterval = 3000, targetEmail = null } = message;
+
+  // 获取验证码，传入包装后的进度回调
+  const code = await apiManager.getVerificationCode(
+    maxRetries,
+    retryInterval,
+    wrappedProgressCallback,
+    this.codeRequestController.signal,
+    false, // 自动化流程不启用链接打开功能
+    targetEmail  // 新增：传递目标邮箱地址
+  );
+
+  // ... 后续处理
+}
+```
+
+
 # 临时邮箱验证码获取工具
 
 一个现代化的Chrome侧边栏扩展，专为自动生成临时邮箱并获取验证码而设计。支持多域名配置和Cloudflare域名转发，提供持久化的侧边栏体验。
