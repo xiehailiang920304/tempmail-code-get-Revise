@@ -1494,6 +1494,39 @@ class SidebarFlowManager {
       this.generateEmailForHome();
     });
 
+    // 邮箱复制按钮
+    document.getElementById('homeCopyFullEmailBtn')?.addEventListener('click', () => {
+      this.copyFullEmail();
+    });
+
+    document.getElementById('homeCopyEmailNameBtn')?.addEventListener('click', () => {
+      this.copyEmailName();
+    });
+
+    // 邮箱输入框事件监听
+    const homeEmailInput = document.getElementById('homeEmailInput');
+    if (homeEmailInput) {
+      // 输入时自动去除空格
+      homeEmailInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.trim();
+      });
+
+      // 粘贴时自动去除空格
+      homeEmailInput.addEventListener('paste', (e) => {
+        setTimeout(() => {
+          e.target.value = e.target.value.trim();
+        }, 0);
+      });
+
+      // 失去焦点时验证邮箱格式
+      homeEmailInput.addEventListener('blur', (e) => {
+        const email = e.target.value.trim();
+        if (email && (!email.includes('@') || email.length < 5)) {
+          this.showNotification('邮箱格式不正确', 'warn');
+        }
+      });
+    }
+
     document.getElementById('homeGetCodeBtn')?.addEventListener('click', () => {
       this.getCodeForHome();
     });
@@ -1948,18 +1981,81 @@ class SidebarFlowManager {
     }
   }
 
+  // 复制完整邮箱地址
+  async copyFullEmail() {
+    const emailInput = document.getElementById('homeEmailInput');
+    if (!emailInput || !emailInput.value) {
+      this.showNotification('请先生成邮箱地址', 'warn');
+      return;
+    }
+
+    const fullEmail = emailInput.value;
+    const copySuccess = await this.copyToClipboard(fullEmail, '完整邮箱地址已复制到剪切板', '复制完整邮箱地址失败');
+    if (copySuccess) {
+      this.addLog(`完整邮箱地址已复制: ${fullEmail}`, 'success');
+    } else {
+      this.addLog('复制完整邮箱地址失败', 'warn');
+    }
+  }
+
+  // 复制邮箱名（@前面的部分）
+  async copyEmailName() {
+    const emailInput = document.getElementById('homeEmailInput');
+    if (!emailInput || !emailInput.value) {
+      this.showNotification('请先生成邮箱地址', 'warn');
+      return;
+    }
+
+    const fullEmail = emailInput.value;
+    const atIndex = fullEmail.indexOf('@');
+    if (atIndex === -1) {
+      this.showNotification('邮箱格式不正确', 'error');
+      return;
+    }
+
+    const emailName = fullEmail.substring(0, atIndex);
+    const copySuccess = await this.copyToClipboard(emailName, '邮箱名已复制到剪切板', '复制邮箱名失败');
+    if (copySuccess) {
+      this.addLog(`邮箱名已复制: ${emailName}`, 'success');
+    } else {
+      this.addLog('复制邮箱名失败', 'warn');
+    }
+  }
+
   // 首页获取验证码
   async getCodeForHome() {
     try {
+      // 检查邮箱输入框是否有内容
+      const emailInput = document.getElementById('homeEmailInput');
+      if (!emailInput || !emailInput.value.trim()) {
+        this.showNotification('请先生成邮箱或手动输入邮箱地址', 'warn');
+        return;
+      }
+
+      const currentEmail = emailInput.value.trim();
+
+      // 简单的邮箱格式验证
+      if (!currentEmail.includes('@') || currentEmail.length < 5) {
+        this.showNotification('邮箱格式不正确', 'error');
+        return;
+      }
+
       // 清空以前的验证码
       document.getElementById('homeCodeInput').value = '';
       // 显示停止按钮，隐藏获取按钮
       document.getElementById('homeGetCodeBtn').style.display = 'none';
       document.getElementById('homeStopCodeBtn').style.display = 'inline-block';
 
-      this.addLog('开始获取验证码（使用设置页面配置）...', 'info');
+      // 检查是否是tempmail相关邮箱
+      if (currentEmail.includes('@tempmail.plus') || currentEmail.includes('@mailto.plus')) {
+        this.addLog(`开始获取验证码（直接使用: ${currentEmail}）...`, 'info');
+      } else {
+        this.addLog(`开始获取验证码（邮箱: ${currentEmail}，通过Cloudflare转发到配置的tempmail邮箱）...`, 'info');
+      }
+
       const response = await chrome.runtime.sendMessage({
         action: 'getVerificationCode',
+        targetEmail: currentEmail, // 传递当前邮箱地址
         maxRetries: 10,
         retryInterval: 3000,
         openLinksOnFailure: true
