@@ -135,6 +135,21 @@ body {
     align-items: center;
 }
 
+.email-copy-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: space-between;
+}
+
+.email-copy-buttons .btn {
+    flex: 1;
+    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
 .email-display input,
 .code-display input {
     flex: 1;
@@ -142,6 +157,18 @@ body {
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 12px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.email-display input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    background: #ffffff;
+}
+
+.code-display input {
     background: #f9f9f9;
 }
 
